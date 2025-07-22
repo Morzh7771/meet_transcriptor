@@ -5,7 +5,7 @@ from src.backend.utils.logger import CustomLog
 
 log = CustomLog()
 
-# load environment variables from .env
+# Load keys from .env
 load_dotenv()
 
 class Transcriber:
@@ -15,16 +15,16 @@ class Transcriber:
             raise ValueError("OPENAI_API_KEY is missing in .env")
         self.client = OpenAI(api_key=api_key)
 
-    def transcribe(self, wav_file: str) -> str:
-        log.info(f"Sending {wav_file} to Whisper for transcription...")
+    def transcribe(self, webm_file: str) -> str:
+        log.info(f"🎧 Sending file {webm_file} to Whisper API...")
         try:
-            with open(wav_file, "rb") as f:
+            with open(webm_file, "rb") as f:
                 response = self.client.audio.transcriptions.create(
                     model="whisper-1",
                     file=f
                 )
-            log.info(f"Transcription received, length: {len(response.text)} characters")
+            log.info(f"✅ Received {len(response.text)} characters in transcript")
             return response.text
         except Exception as e:
-            log.error(f"Transcription error: {e}")
+            log.error(f"❌ Transcription error: {e}")
             return ""

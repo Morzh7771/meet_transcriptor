@@ -14,15 +14,14 @@ class CustomLog:
         )
         console_handler.setFormatter(formatter)
 
-        # avoid duplicate handlers
         if not self.logger.hasHandlers():
             self.logger.addHandler(console_handler)
 
-    def info(self, msg):
-        self.logger.info(msg)
+    def info(self, msg, *args, **kwargs):
+        self.logger.info(msg, *args, **kwargs)
 
-    def warning(self, msg):
-        self.logger.warning(msg)
+    def warning(self, msg, *args, **kwargs):
+        self.logger.warning(msg, *args, **kwargs)
 
-    def error(self, msg):
-        self.logger.error(msg)
+    def error(self, msg, *args, **kwargs):
+        self.logger.error(msg, *args, **kwargs)

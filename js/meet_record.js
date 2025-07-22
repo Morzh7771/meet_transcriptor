@@ -89,6 +89,7 @@ async function logStep(page, message) {
 }
 
 async function main(email,password,meet_code,duration,port) {
+  console.log(port)
   if (!fs.existsSync("js/screenshots")) fs.mkdirSync("js/screenshots");
 
   const browser = await launch({
@@ -149,7 +150,7 @@ async function main(email,password,meet_code,duration,port) {
   await tabUntilAllClassesMatch(page);
   await page.keyboard.press("Enter");
   await logStep(page, "Enter на нужном элементе со всеми классами");
-  await page.waitForNavigation({ waitUntil: "networkidle2" });
+  await sleep(1000);
   await logStep(page, "Logged in to the conference");
   await sleep(1000);
   await page.keyboard.press('Enter');
@@ -164,10 +165,8 @@ async function main(email,password,meet_code,duration,port) {
     } else {
       console.warn("⚠️ menu open button not found!");
     }
-
     buttons = await page.$$('[jsname="A5il2e"]');
   }
-   await logStep(page, "debug");
   if (buttons.length > 0) {
     for (const btn of buttons) {
       const hasPeopleIcon = await btn.$eval('i', i => i.textContent.includes('people')).catch(() => false);
