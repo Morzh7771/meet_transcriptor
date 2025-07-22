@@ -3,8 +3,9 @@ from dotenv import load_dotenv
 import asyncio
 from src.backend.api.js_plagin_api import JsPluginApi
 from src.backend.audio.audio_server import AudioServer
+from src.backend.utils.logger import CustomLog
 load_dotenv()
-
+log = CustomLog()
 EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
 
@@ -18,7 +19,7 @@ class Facade:
         self.audio_server = AudioServer()
 
     async def run_google_meet_recording(self, meet_code: str = "jsa-vatt-ovo", duration_sec: int = 60, wsPort: int = 2033):
-        print("🎬 Starting WebSocket server and connecting to JS...")
+        log.info("🎬 Starting WebSocket server and connecting to JS...")
 
         # Запускаем start() напрямую, чтобы он выполнился полностью
         start_task = asyncio.create_task(self.audio_server.start(meet_code, wsPort))
@@ -29,5 +30,5 @@ class Facade:
         # Дожидаемся полной отработки start()
         await start_task
 
-        print("🛑 Recording stop complete.")
+        log.info("🛑 Recording stop complete.")
 

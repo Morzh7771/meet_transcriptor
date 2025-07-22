@@ -8,11 +8,11 @@ import os
 import json
 import time
 from typing import Optional
-
+from src.backend.utils.logger import CustomLog 
 app = FastAPI()
 audio_server = AudioServer()
 BACKEND_URL = "http://localhost:3000"
-
+log = CustomLog()
 class LoginRequest(BaseModel):
     email: str
     password: str
@@ -31,7 +31,7 @@ class ConnectRequest(BaseModel):
 @app.post("/start-login")
 async def login(req: LoginRequest):
     async with aiohttp.ClientSession() as session:
-        print("🔐 Sending request to /start-login...")
+        log.info("🔐 Sending request to /start-login...")
         response = await session.post(
             f"{BACKEND_URL}/start-login",
             json=req.dict()
@@ -42,7 +42,7 @@ async def login(req: LoginRequest):
 @app.post("/submit-2fa")
 async def submit_2fa(req: TwoFARequest):
     async with aiohttp.ClientSession() as session:
-        print("🔐 Sending code to /submit-2fa...")
+        log.info("🔐 Sending code to /submit-2fa...")
         response = await session.post(
             f"{BACKEND_URL}/submit-2fa",
             json=req.dict()
@@ -64,7 +64,7 @@ async def connect(req: ConnectRequest):
             }
         )
         text = await response.text()
-        print(f"▶️ Start command sent, response: {response.status} — {text}")
+        log.info(f"▶️ Sending /start command to Node.js with meetCode={req.meetCode}, duration={req.duration}s")
     try:
         asyncio.create_task(audio_server.start(req.port))
         return {

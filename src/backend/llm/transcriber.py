@@ -30,5 +30,5 @@ class Transcriber:
             )
             return response.text
         except Exception as e:
-            print(f"❌ Whisper error: {e}")
+            log.error(f"❌ Whisper error: {e}")
             return ""

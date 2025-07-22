@@ -1,6 +1,7 @@
 import time
 import os
-
+from src.backend.utils.logger import CustomLog  
+log = CustomLog()
 def generate_paths():
     os.makedirs("recordings/audio", exist_ok=True)
     os.makedirs("recordings/transcribts", exist_ok=True)
@@ -12,4 +13,4 @@ def generate_paths():
 def save_transcript(path: str, transcript: list[str]):
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(transcript))
-    print(f"📄 Transcript saved: {path}")
+    log.info(f"📄 Transcript saved: {path}")
