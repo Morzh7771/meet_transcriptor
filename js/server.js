@@ -17,13 +17,13 @@ app.post("/login", async (req, res) => {
     }
   
     try {
-      console.log(`👤 Запуск логина для ${email}. Ожидается ввод 2FA кода в терминале...`);
+      console.log(`👤 Launching login for ${email}. Waiting for 2FA code in terminal...`);
   
       await first_login(email, password, phone);
   
       res.status(200).json({ status: "Login complete" });
     } catch (error) {
-      console.error("❌ Ошибка во время логина:", error);
+      console.error("❌ Error during login:", error);
       res.status(500).json({ error: "Login failed" });
     }
   });
@@ -50,10 +50,10 @@ app.post("/start", async (req, res) => {
   }
 
   try {
-    main(email, password, meetCode, duration || 10, port); // запускаем без ожидания завершения
+    main(email, password, meetCode, duration || 10, port); // launch without waiting for completion
         res.status(200).json({ status: "Recording started." });
   } catch (error) {
-    console.error("Ошибка при запуске main:", error);
+    console.error("Error at start main:", error);
         res.status(500).json({ error: "Failed to start recording." });
   }
 });

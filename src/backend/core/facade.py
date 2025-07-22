@@ -18,7 +18,7 @@ class Facade:
         self.audio_server = AudioServer()
 
     async def run_google_meet_recording(self, meet_code: str = "jsa-vatt-ovo", duration_sec: int = 60, wsPort: int = 2033):
-        print("🎬 Запуск WebSocket-сервера и подключение к JS...")
+        print("🎬 Starting WebSocket server and connecting to JS...")
 
         # Запускаем start() напрямую, чтобы он выполнился полностью
         start_task = asyncio.create_task(self.audio_server.start(meet_code, wsPort))
@@ -29,5 +29,5 @@ class Facade:
         # Дожидаемся полной отработки start()
         await start_task
 
-        print("🛑 Остановка записи завершена.")
+        print("🛑 Recording stop complete.")
 

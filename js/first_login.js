@@ -15,7 +15,7 @@ let stepCounter = 1;
 async function logStep(page, message) {
   const filename = `js/screenshots/login/step_${String(stepCounter++).padStart(2, "0")}_${message.replace(/\s+/g, "_")}.png`;
   await page.screenshot({ path: filename, fullPage: true });
-  console.log(`📸 ${message} — скриншот сохранён: ${filename}`);
+  console.log(`📸 ${message} — screenshot saved: ${filename}`);
 }
 
 async function startLogin(email, password, phone) {

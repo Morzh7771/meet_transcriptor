@@ -23,7 +23,7 @@ class AudioServer:
         try:
             text = await self.transcriber.transcribe(webm_path)
             transcript_text = text.strip()
-            print("🧐 Whisper result:", transcript_text[:100] or "<пустой>")
+            print("🧐 Whisper result:", transcript_text[:100] or "<empty>")
 
             if transcript_text:
                 transcript_path = os.path.join(self.paths["transcripts"], f"chunk_{timestamp}.txt")
@@ -112,7 +112,7 @@ class AudioServer:
             print("🧹 WebSocket server closed")
 
     async def finalize_last_chunk(self):
-        """Сохраняет оставшийся буфер аудио и спикеров перед завершением"""
+        """Saves the remaining audio and speaker buffer before terminating."""
         if self.chunk_buffer:
             timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
             self.current_timestamp = timestamp
@@ -137,7 +137,7 @@ class AudioServer:
     def save(self):
         os.makedirs(self.paths["full"], exist_ok=True)
 
-        # Сборка полного транскрипта
+        # Assembling a full transcript
         full_transcript_path = os.path.join(self.paths["full"], "full_transcript.txt")
         transcript_files = sorted(glob(os.path.join(self.paths["transcripts"], "chunk_*.txt")))
 
@@ -148,7 +148,7 @@ class AudioServer:
 
         print(f"📄 Full transcript saved to: {full_transcript_path}")
 
-        # Сборка speaker событий в один JSON
+        # Assembling speaker events into one JSON
         speaker_timeline_path = os.path.join(self.paths["full"], "speaker_timeline.json")
         with open(speaker_timeline_path, "w", encoding="utf-8") as f:
             json.dump(self.speaker_events, f, ensure_ascii=False, indent=2)
@@ -160,7 +160,7 @@ class AudioServer:
 
         valid_webms = []
         for path in webm_files:
-            if os.path.getsize(path) > 1024:  # более 1 KB
+            if os.path.getsize(path) > 1024:  # More then 1 KB
                 valid_webms.append(path)
             else:
                 print(f"⚠️ Skipping invalid or too small chunk: {path}")

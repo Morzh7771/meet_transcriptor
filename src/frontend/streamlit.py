@@ -64,16 +64,16 @@ def get_facade():
     return st.session_state.facade
 
 def run(meet_code, duration):
-    with st.spinner("🔄 Бот заходит в митинг и начинает запись..."):
+    with st.spinner("🔄 The bot enters the rally and starts recording..."):
         async def _process(meet_code, duration):
             facade = get_facade()
             try:
                 response = await facade.run_google_meet_recording(meet_code, duration)
-                st.success("✅ Готово! Аудио и транскрипт сохранены.")
+                st.success("✅ Done! Audio and transcript saved.")
                 return response
             except Exception as e:
-                log.error(f"Ошибка во время записи: {e}")
-                st.error(f"❌ Ошибка: {e}")
+                log.error(f"Error while recording: {e}")
+                st.error(f"❌ Error: {e}")
                 raise e
 
         return StreamlitAsyncManager.run_async(_process(meet_code, duration))
@@ -81,14 +81,14 @@ def run(meet_code, duration):
 def main():
     st.set_page_config(page_title="🎙 Google Meet Recorder", layout="centered")
     st.title("🎙 Google Meet Audio Recorder with Whisper")
-    st.markdown("Запускает бота в Google Meet, записывает аудио и расшифровывает через Whisper.")
+    st.markdown("Launches a bot in Google Meet, records audio and transcribes it via Whisper.")
 
-    meet_code = st.text_input("Введите код митинга (например: jsa-vatt-ovo)", "jsa-vatt-ovo")
-    duration = st.slider("Длительность записи (сек)", min_value=30, max_value=600, value=60, step=30)
+    meet_code = st.text_input("Enter the rally code (for example: jsa-vatt-ovo)", "jsa-vatt-ovo")
+    duration = st.slider("Recording duration (sec)", min_value=30, max_value=600, value=60, step=30)
 
-    if st.button("▶️ Начать запись"):
+    if st.button("▶️ Start recording"):
         if not meet_code:
-            st.warning("❗ Пожалуйста, введите код митинга.")
+            st.warning("❗ Please enter the rally code.")
         else:
             run(meet_code, duration)
 

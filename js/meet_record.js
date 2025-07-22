@@ -149,7 +149,7 @@ async function main(email,password,meet_code,duration,port) {
   // Enter navigation
   await tabUntilAllClassesMatch(page);
   await page.keyboard.press("Enter");
-  await logStep(page, "Enter на нужном элементе со всеми классами");
+  await logStep(page, "Enter and the desired element with all classes");
   await sleep(1000);
   await logStep(page, "Logged in to the conference");
   await sleep(1000);
@@ -220,7 +220,7 @@ async function main(email,password,meet_code,duration,port) {
     }, duration * 1000);
     
     trackAndSendSpeakerVectors(page, Number(duration), ws)
-      .catch(e => console.error("Ошибка в trackAndSendSpeakerVectors:", e));
+      .catch(e => console.error("Error in trackAndSendSpeakerVectors:", e));
   });
 
   ws.on("message", async (msg) => {
