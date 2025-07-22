@@ -83,10 +83,18 @@ class AudioServer:
                         try:
                             data = json.loads(message)
                             try:
-                                timestamp = float(data.get("time", time.time()))
+                                time_value = data.get("time", None)
+                                if isinstance(time_value, (int, float)):
+                                    timestamp = float(time_value)
+                                elif isinstance(time_value, str) and time_value.isdigit():
+                                    timestamp = float(time_value)
+                                else:
+                                    raise ValueError("Invalid timestamp")
+
                                 ts = time.strftime('%H:%M:%S', time.localtime(timestamp))
-                            except (ValueError, TypeError):
+                            except Exception as e:
                                 ts = "??:??:??"
+                                #print(f"⚠️ Time parsing error: {e}")
                             speakers = data.get("speakers", {})
                             print(f"🗣️ {ts} | Speaking: " +
                                 ", ".join(f"{k}: {'🎤' if v else '—'}" for k, v in speakers.items()))
