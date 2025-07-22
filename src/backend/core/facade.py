@@ -17,13 +17,17 @@ class Facade:
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)
         self.audio_server = AudioServer()
 
-    async def run_google_meet_recording(self, meet_code: str ="jsa-vatt-ovo", duration_sec: int = 60, wsPort: int = 2033):
+    async def run_google_meet_recording(self, meet_code: str = "jsa-vatt-ovo", duration_sec: int = 60, wsPort: int = 2033):
         print("🎬 Запуск WebSocket-сервера и подключение к JS...")
-        audio_task = asyncio.create_task(self.audio_server.start(wsPort))
 
-        # Отправка команды запуска в JS
+        # Запускаем start() напрямую, чтобы он выполнился полностью
+        start_task = asyncio.create_task(self.audio_server.start(meet_code, wsPort))
+
+        # Подключаем JS плагин (он сам завершает WebSocket по таймеру)
         await self.js_plugin_api.connect(meet_code, duration_sec, wsPort)
 
-        # Ждем завершения записи
-        await self.audio_server.connection_closed.wait()
-        print("🛑 Остановка записи.")
+        # Дожидаемся полной отработки start()
+        await start_task
+
+        print("🛑 Остановка записи завершена.")
+

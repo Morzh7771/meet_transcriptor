@@ -182,31 +182,89 @@ async function main(email,password,meet_code,duration,port) {
   await logStep(page, "user_list");
   await sleep(1000);
   const ws = new WebSocket(`ws://localhost:${port}`);
-  ws.on("open", async () => {
-    console.log("🔌 WebSocket connected, starting transmission...");
+  let currentStream = null;
 
+  ws.on("open", async () => {
+    console.log("🔌 WebSocket connected, waiting for 'restart-stream' commands...");
+    if (!currentStream) {
+      console.log("🟢 Starting initial stream...");
+      currentStream = await getStream(page, {
+        audio: true,
+        video: false,
+        mimeType: "audio/webm; codecs=opus",
+        audioBitsPerSecond: 128000
+      });
+  
+      currentStream.on("data", chunk => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(chunk);
+        }
+      });
+      
+      console.log("🎙️ Initial stream started.");
+    }
+    setTimeout(async () => {
+      console.log(`⏰ Duration (${duration} sec) elapsed. Cleaning up...`);
+  
+      if (currentStream) {
+        try {
+          currentStream.destroy();
+        } catch (err) {
+          console.warn("⚠️ Error destroying stream:", err);
+        }
+      }
+  
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close(); // вызовет ws.on("close")
+      }
+    }, duration * 1000);
+    
     trackAndSendSpeakerVectors(page, Number(duration), ws)
       .catch(e => console.error("Ошибка в trackAndSendSpeakerVectors:", e));
+  });
 
-    const stream = await getStream(page, {
-      audio: true,
-      video: false,
-      mimeType: "audio/webm; codecs=opus",
-      audioBitsPerSecond: 128000
-    });
+  ws.on("message", async (msg) => {
+    const command = msg.toString().trim();
+    if (command === "restart-stream") {
+      console.log("🔁 Restart command received from Python.");
 
-    stream.on("data", chunk => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(chunk);
+      if (currentStream) {
+        try {
+          currentStream.destroy();
+        } catch (err) {
+          console.warn("⚠️ Error while destroying stream:", err);
+        }
       }
-    });
 
-    await sleep(Number(duration) * 1000);
-    await stream.destroy();
-    ws.close();
-    console.log("⏹️ Record ended, WebSocket closed.");
+      currentStream = await getStream(page, {
+        audio: true,
+        video: false,
+        mimeType: "audio/webm; codecs=opus",
+        audioBitsPerSecond: 128000
+      });
+
+      currentStream.on("data", chunk => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(chunk);
+        }
+      });
+
+      console.log("🎙️ New stream started.");
+    }
+  });
+
+  ws.on("close", async () => {
+    if (currentStream) {
+      try {
+        currentStream.destroy();
+      } catch (err) {
+        console.warn("⚠️ Error while destroying stream:", err);
+      }
+    }
     await browser.close();
     (await wss).close();
+    console.log("⏹️ WebSocket closed. Browser and stream cleaned up.");
   });
 }
+
 module.exports = { main };

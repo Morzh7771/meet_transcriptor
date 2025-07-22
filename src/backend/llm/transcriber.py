@@ -1,5 +1,7 @@
 from openai import OpenAI
+from openai import AsyncOpenAI
 from dotenv import load_dotenv
+import aiofiles
 import os
 from src.backend.utils.logger import CustomLog
 
@@ -15,16 +17,18 @@ class Transcriber:
             raise ValueError("OPENAI_API_KEY is missing in .env")
         self.client = OpenAI(api_key=api_key)
 
-    def transcribe(self, webm_file: str) -> str:
+    async def transcribe(self, webm_file: str) -> str:
         log.info(f"🎧 Sending file {webm_file} to Whisper API...")
+        client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+        async with aiofiles.open(webm_file, 'rb') as f:
+            data = await f.read()
         try:
-            with open(webm_file, "rb") as f:
-                response = self.client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=f
-                )
-            log.info(f"✅ Received {len(response.text)} characters in transcript")
+            response = await client.audio.transcriptions.create(
+                model="whisper-1",
+                file=(webm_file, data)
+            )
             return response.text
         except Exception as e:
-            log.error(f"❌ Transcription error: {e}")
+            print(f"❌ Whisper error: {e}")
             return ""
