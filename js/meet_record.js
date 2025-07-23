@@ -266,5 +266,40 @@ async function main(email,password,meet_code,duration,port) {
     console.log("⏹️ WebSocket closed. Browser and stream cleaned up.");
   });
 }
+async function cleanupMeetSession(ws, browser, currentStream) {
+  console.log("🧹 Cleaning up Meet session...");
 
-module.exports = { main };
+  if (currentStream) {
+    try {
+      currentStream.destroy();
+      console.log("🛑 Stream destroyed");
+    } catch (err) {
+      console.warn("⚠️ Error destroying stream:", err);
+    }
+  }
+
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.close();
+    console.log("🔌 WebSocket closed");
+  }
+
+  if (browser) {
+    try {
+      await browser.close();
+      console.log("🧼 Browser closed");
+    } catch (err) {
+      console.warn("⚠️ Error closing browser:", err);
+    }
+  }
+
+  try {
+    const server = await wss;
+    server.close();
+    console.log("🛑 WebSocket server closed");
+  } catch (err) {
+    console.warn("⚠️ Error closing WebSocket server:", err);
+  }
+
+  console.log("✅ Meet session cleanup complete.");
+}
+module.exports = { main,cleanupMeetSession };

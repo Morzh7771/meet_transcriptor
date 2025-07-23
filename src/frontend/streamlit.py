@@ -64,7 +64,7 @@ def get_facade():
     return st.session_state.facade
 
 def run(meet_code, duration):
-    with st.spinner("🔄 The bot enters the rally and starts recording..."):
+    with st.spinner(" The bot enters the rally and starts recording..."):
         async def _process(meet_code, duration):
             facade = get_facade()
             try:
@@ -86,7 +86,7 @@ def main():
     meet_code = st.text_input("Enter the rally code (for example: jsa-vatt-ovo)", "jsa-vatt-ovo")
     duration = st.slider("Recording duration (sec)", min_value=30, max_value=600, value=60, step=30)
 
-    if st.button("▶️ Start recording"):
+    if st.button(" Start recording"):
         if not meet_code:
             st.warning("❗ Please enter the rally code.")
         else:

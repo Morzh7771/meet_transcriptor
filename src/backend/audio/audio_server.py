@@ -6,8 +6,8 @@ import websockets
 import subprocess
 from glob import glob
 from src.backend.llm.transcriber import Transcriber
-from src.backend.utils.logger import CustomLog 
-log = CustomLog() 
+from src.backend.utils.logger import CustomLog
+log = CustomLog()
 class AudioServer:
     def __init__(self):
         self.transcriber = Transcriber()
@@ -19,23 +19,23 @@ class AudioServer:
         self.current_timestamp = None
 
     async def transcribe_chunk(self, webm_path: str, timestamp: str):
-        log.info(f"🎹 Sending chunk to Whisper: {webm_path}")
+        log.info(f" Sending chunk to Whisper: {webm_path}")
         try:
             text = await self.transcriber.transcribe(webm_path)
             transcript_text = text.strip()
-            log.info("🧐 Whisper result:", transcript_text[:100] or "<empty>")
+            log.info(f"▶  {transcript_text[:100] or '<empty>'}")
 
             if transcript_text:
                 transcript_path = os.path.join(self.paths["transcripts"], f"chunk_{timestamp}.txt")
                 with open(transcript_path, "w", encoding="utf-8") as f:
                     f.write(transcript_text)
-                log.info(f"📄 Saved transcript to: {transcript_path}")
+                log.info(f" Saved transcript to: {transcript_path}")
 
         except Exception as e:
             log.error("❌ Whisper error:", e)
 
     async def handler_whisper(self, ws):
-        log.info("🎤 Whisper WebSocket connected")
+        log.info(" Whisper WebSocket connected")
         try:
             async for message in ws:
                 if isinstance(message, bytes):
@@ -47,7 +47,7 @@ class AudioServer:
                         webm_path = os.path.join(self.paths["audio"], f"chunk_{timestamp}.webm")
                         with open(webm_path, "wb") as f:
                             f.write(self.chunk_buffer)
-                        log.info(f"📂 Saved audio chunk to: {webm_path}")
+                        log.info(f" Saved audio chunk to: {webm_path}")
 
                         asyncio.create_task(self.transcribe_chunk(webm_path, timestamp))
                         await ws.send("restart-stream")
@@ -96,7 +96,7 @@ class AudioServer:
         for path in self.paths.values():
             os.makedirs(path, exist_ok=True)
 
-        log.info(f"🚀 Starting Whisper WebSocket server on port {ws_port}")
+        log.info(f" Starting Whisper WebSocket server on port {ws_port}")
         server = await websockets.serve(self.handler_whisper, "localhost", ws_port)
 
         try:
@@ -109,7 +109,7 @@ class AudioServer:
         finally:
             server.close()
             await server.wait_closed()
-            log.info("🧹 WebSocket server closed")
+            log.info(" WebSocket server closed")
 
     async def finalize_last_chunk(self):
         """Saves the remaining audio and speaker buffer before terminating."""
@@ -119,7 +119,7 @@ class AudioServer:
             webm_path = os.path.join(self.paths["audio"], f"chunk_{timestamp}.webm")
             with open(webm_path, "wb") as f:
                 f.write(self.chunk_buffer)
-            log.info(f"📦 Final audio chunk saved: {webm_path}")
+            log.info(f" Final audio chunk saved: {webm_path}")
 
             await self.transcribe_chunk(webm_path, timestamp)
 
@@ -130,7 +130,7 @@ class AudioServer:
                 )
                 with open(speaker_file, "w", encoding="utf-8") as f:
                     json.dump(self.speaker_events_buffer, f, ensure_ascii=False, indent=2)
-                log.info(f"🗣 Final speaker data saved to: {speaker_file}")
+                log.info(f" Final speaker data saved to: {speaker_file}")
                 self.speaker_events_buffer.clear()
 
             self.chunk_buffer.clear()
@@ -146,21 +146,21 @@ class AudioServer:
                 with open(file, "r", encoding="utf-8") as infile:
                     outfile.write(infile.read() + "\n\n")
 
-        log.info(f"📄 Full transcript saved to: {full_transcript_path}")
+        log.info(f" Full transcript saved to: {full_transcript_path}")
 
         # Assembling speaker events into one JSON
         speaker_timeline_path = os.path.join(self.paths["full"], "speaker_timeline.json")
         with open(speaker_timeline_path, "w", encoding="utf-8") as f:
             json.dump(self.speaker_events, f, ensure_ascii=False, indent=2)
-        log.info(f"🧑‍💬 Speaker timeline saved to: {speaker_timeline_path}")
+        log.info(f" Speaker timeline saved to: {speaker_timeline_path}")
 
-        # Сборка аудио через ffmpeg — фильтрация маленьких файлов
+        # Assembling audio via ffmpeg — filtering small files
         concat_list_path = os.path.join(self.paths["full"], "concat_list.txt")
         webm_files = sorted(glob(os.path.join(self.paths["audio"], "chunk_*.webm")))
 
         valid_webms = []
         for path in webm_files:
-            if os.path.getsize(path) > 1024:  # More then 1 KB
+            if os.path.getsize(path) > 1024:  # More 1 KB
                 valid_webms.append(path)
             else:
                 log.warning(f"⚠️ Skipping invalid or too small chunk: {path}")
@@ -180,7 +180,7 @@ class AudioServer:
                 ["ffmpeg", "-f", "concat", "-safe", "0", "-i", concat_list_path, "-c", "copy", output_audio_path],
                 check=True
             )
-            log.info(f"🔊 Full audio saved to: {output_audio_path}")
+            log.info(f" Full audio saved to: {output_audio_path}")
         except subprocess.CalledProcessError as e:
             log.error("❌ FFmpeg error while merging audio:", e)
 
