@@ -18,7 +18,7 @@ class Transcriber:
         self.client = OpenAI(api_key=api_key)
 
     async def transcribe(self, webm_file: str) -> str:
-        log.info(f"🎧 Sending file {webm_file} to Whisper API...")
+        log.info(f" Sending file {webm_file} to Whisper API...")
         client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
         async with aiofiles.open(webm_file, 'rb') as f:

@@ -22,6 +22,7 @@ class Facade:
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)
         self.audio_server = AudioServer()
 
+    @staticmethod
     async def find_free_port(max_attempts=1000):
         tried_ports = set()
 
@@ -39,9 +40,9 @@ class Facade:
                 except OSError:
                     continue 
 
-    async def run_google_meet_recording(self, meet_code: str = "rgf-miyn-sbf", duration_sec: int = 120):
+    async def run_google_meet_recording(self, meet_code: str = "rgf-miyn-sbf", duration_sec: int = 30):
         log.info(" Starting WebSocket server and connecting to JS...")
-        wsPort = await find_free_port()
+        wsPort = await self.find_free_port()
         # We run start() directly so that it runs completely
         start_task = asyncio.create_task(self.audio_server.start(meet_code, wsPort))
 
@@ -52,4 +53,3 @@ class Facade:
         await start_task
 
         log.info("🛑 Recording stop complete.")
-

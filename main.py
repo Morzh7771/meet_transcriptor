@@ -12,11 +12,11 @@ async def main():
 
 
 
-    raise RuntimeError("Не удалось найти свободный порт.")
+    #raise RuntimeError("Не удалось найти свободный порт.")
 async def pivo():
-    free_port = await find_free_port()
+    free_port = await Facade.find_free_port()
     print(f"✅ Свободный порт найден: {free_port}")
 
 if __name__ == "__main__":
-    #asyncio.run(main())
-    asyncio.run(pivo())
+    asyncio.run(main())
+    #asyncio.run(pivo())
