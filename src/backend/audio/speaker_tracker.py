@@ -17,7 +17,6 @@ class SpeakerTracker:
     def add_event(self, data):
         event = {
             "time_raw": data["time"],
-            "time_human": time.strftime('%H:%M:%S', time.localtime(data["time"] / 1000)),
             "speakers": data["speakers"]
         }
         self.events.append(event)

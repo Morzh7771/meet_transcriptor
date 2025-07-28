@@ -6,7 +6,6 @@ facade = Facade()
 async def command_listener():
     while True:
         try:
-            # читаем ввод без блокировки event loop
             command = await asyncio.to_thread(input, ">>> ")
 
             if command.startswith("terminate "):

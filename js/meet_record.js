@@ -57,7 +57,7 @@ async function tabUntilAllClassesMatch(page, maxSteps = 30) {
   return false;
 }
 
-async function trackAndSendSpeakerVectors(page, ws, sessionState) {
+async function trackAndSendSpeakerVectors(page, ws, sessionState,time_start) {
   console.log("🎤 Tracking speaker vectors...");
   while (!sessionState.terminateRequested) {
     if (!page || page.isClosed()) {
@@ -67,7 +67,7 @@ async function trackAndSendSpeakerVectors(page, ws, sessionState) {
     }
 
     try {
-      const vector = await page.evaluate(() => {
+      const vector = await page.evaluate((startTime) => {
         const cards = Array.from(document.querySelectorAll('div.cxdMu.KV1GEc[aria-label]'));
         const speakers = {};
         cards.forEach(card => {
@@ -79,9 +79,12 @@ async function trackAndSendSpeakerVectors(page, ws, sessionState) {
           }
           speakers[name] = isSpeaking;
         });
-        return { time: Date.now(), speakers };
-      });
-
+        let time = Date.now() - startTime;
+        return { time: time, speakers };
+      }, time_start);
+      
+      console.log("🕒 Time:", vector.time, "ms | 🎙️ Speakers:", vector.speakers);
+      
       if (ws && ws.readyState === ws.OPEN) {
         ws.send(JSON.stringify(vector));
       }
@@ -197,6 +200,7 @@ async function main(email, password, meetCode, port, sessionState, page) {
   }
   await logStep(page, "user_list");
   await sleep(1000);
+  let time_start = Date.now()
   const ws = new WebSocket(`ws://localhost:${port}`);
 sessionState.ws = ws;
 
@@ -214,7 +218,7 @@ ws.on("open", async () => {
     if (ws.readyState === WebSocket.OPEN) ws.send(chunk);
   });
 
-  sessionState.speakerTrackerTask = trackAndSendSpeakerVectors(page, ws, sessionState);
+  sessionState.speakerTrackerTask = trackAndSendSpeakerVectors(page, ws, sessionState, time_start);
 });
 
 ws.on("message", async (msg) => {
