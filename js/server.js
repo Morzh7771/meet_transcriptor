@@ -1,10 +1,12 @@
 
 const express = require("express");
-const { main } = require("./meet_record.js");
 const { first_login, submit2FACode } = require("./first_login");
+const { SessionManager } = require("./sessionManager");
+const { v4: uuidv4 } = require("uuid");
 
 const app = express();
 const PORT = 3003;
+const sessionManager = new SessionManager();
 
 app.use(express.json());
 
@@ -45,24 +47,31 @@ app.post("/submit-2fa", (req, res) => {
   res.status(200).json({ status: "2FA code submitted. Finishing login in background." });
 });
 
-app.post("/start", (req, res) => {
-  const { email, password, meetCode, duration, port } = req.body;
-
-  if (!email || !password || !meetCode) {
+app.post("/start", async (req, res) => {
+  const { email, password, meetCode, port } = req.body;
+  if (!email || !password || !meetCode || !port) {
     return res.status(400).json({ error: "Missing required parameters." });
   }
 
-  void (async () => {
-    try {
-      console.log(`🎥 Starting recording for ${email} | Code: ${meetCode}`);
-      await main(email, password, meetCode, duration || 10, port);
-      console.log(`✅ Recording for ${email} finished.`);
-    } catch (err) {
-      console.error("❌ Error inside async main():", err);
-    }
-  })();
+  const sessionId = uuidv4();
+  try {
+    const result = await sessionManager.startSession(email, password,sessionId, meetCode, port);
+    res.status(200).json({ ...result, sessionId });
+  } catch (err) {
+    console.error("❌ Failed to start session:", err);
+    res.status(500).json({ error: "Failed to start session." });
+  }
+});
 
-  res.status(200).json({ status: "Recording started in background." });
+
+app.post("/terminate", async (req, res) => {
+  const { sessionId } = req.body;
+  const result = await sessionManager.terminate(sessionId);
+  res.json(result);
+});
+
+app.get("/list", (req, res) => {
+  res.json(sessionManager.listSessions());
 });
 
 app.listen(PORT, () => {

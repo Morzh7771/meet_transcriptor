@@ -3,10 +3,10 @@ const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const { launch, getStream, wss } = require("puppeteer-stream");
 const fs = require("fs");
 const { executablePath } = require("puppeteer");
-const readline = require("readline");
 const WebSocket = require("ws");
 
 puppeteer.use(StealthPlugin());
+
 
 const TARGET_CLASS_LIST = [
   "UywwFc-LgbsSe",
@@ -17,6 +17,14 @@ const TARGET_CLASS_LIST = [
   "IyLmn",
   "QJgqC"
 ];
+const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+let stepCounter = 1;
+async function logStep(page, message) {
+  const filename = `js/screenshots/step_${String(stepCounter++).padStart(2, "0")}_${message.replace(/\s+/g, "_")}.png`;
+  await page.screenshot({ path: filename, fullPage: true });
+  console.log(`📸 ${message} — скриншот сохранён: ${filename}`);
+}
 
 async function tabUntilAllClassesMatch(page, maxSteps = 30) {
   await page.keyboard.press('Enter');
@@ -49,49 +57,45 @@ async function tabUntilAllClassesMatch(page, maxSteps = 30) {
   return false;
 }
 
-async function trackAndSendSpeakerVectors(page, durationSec, ws) {
-  const endTime = Date.now() + durationSec * 1000;
-
-  while (Date.now() < endTime) {
-    const vector = await page.evaluate(() => {
-      const cards = Array.from(document.querySelectorAll('div.cxdMu.KV1GEc[aria-label]'));
-      const speakers = {};
-      cards.forEach(card => {
-        const name = card.getAttribute('aria-label');
-        const indicator = card.querySelector('div[jsname="QgSmzd"]');
-        let isSpeaking = false;
-        if (indicator) {
-          isSpeaking = !indicator.classList.contains('gjg47c');
-        }
-        speakers[name] = isSpeaking;
-      });
-      return {
-        time: Date.now(),
-        speakers
-      };
-    });
-
-    console.log(vector);
-    if (ws && ws.readyState === ws.OPEN) {
-      ws.send(JSON.stringify(vector));
+async function trackAndSendSpeakerVectors(page, ws, sessionState) {
+  console.log("🎤 Tracking speaker vectors...");
+  while (!sessionState.terminateRequested) {
+    if (!page || page.isClosed()) {
+      console.warn("❌ Page closed — stopping speaker tracking");
+      sessionState.terminateRequested = true;
+      break;
     }
-    await new Promise(res => setTimeout(res, 50));
+
+    try {
+      const vector = await page.evaluate(() => {
+        const cards = Array.from(document.querySelectorAll('div.cxdMu.KV1GEc[aria-label]'));
+        const speakers = {};
+        cards.forEach(card => {
+          const name = card.getAttribute('aria-label');
+          const indicator = card.querySelector('div[jsname="QgSmzd"]');
+          let isSpeaking = false;
+          if (indicator) {
+            isSpeaking = !indicator.classList.contains('gjg47c');
+          }
+          speakers[name] = isSpeaking;
+        });
+        return { time: Date.now(), speakers };
+      });
+
+      if (ws && ws.readyState === ws.OPEN) {
+        ws.send(JSON.stringify(vector));
+      }
+    } catch (err) {
+      console.error("⚠️ Failed to track speakers:", err.message);
+      break;
+    }
+
+    await sleep(50);
   }
 }
 
-const sleep = ms => new Promise(res => setTimeout(res, ms));
 
-let stepCounter = 1;
-async function logStep(page, message) {
-  const filename = `js/screenshots/step_${String(stepCounter++).padStart(2, "0")}_${message.replace(/\s+/g, "_")}.png`;
-  await page.screenshot({ path: filename, fullPage: true });
-  console.log(`📸 ${message} — скриншот сохранён: ${filename}`);
-}
-
-async function main(email,password,meet_code,duration,port) {
-  console.log(port)
-  if (!fs.existsSync("js/screenshots")) fs.mkdirSync("js/screenshots");
-
+async function launchBrowser() {
   const browser = await launch({
     headless: false,
     executablePath: executablePath(),
@@ -101,17 +105,29 @@ async function main(email,password,meet_code,duration,port) {
       "--window-size=1920,1080",
       "--autoplay-policy=no-user-gesture-required",
       "--no-sandbox",
-      "--no-first-run",                     
-      "--no-default-browser-check",         
-      "--disable-features=TranslateUI",     
-      "--disable-extensions",               
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-features=TranslateUI",
+      "--disable-extensions",
     ],
     closeDelay: 2000,
   });
 
   const page = await browser.newPage();
+
+  return { browser, page };
+}
+
+async function joinMeetAndRecord(email, password, sessionState, page, meetCode, port) {
+  await main(email, password, meetCode, port, sessionState, page);
+}
+
+
+async function main(email, password, meetCode, port, sessionState, page) {
+  if (!fs.existsSync("js/screenshots")) fs.mkdirSync("js/screenshots");
+
   await page.goto("https://accounts.google.com/", { waitUntil: "networkidle2" });
-  await browser.defaultBrowserContext().overridePermissions(
+  await page.browser().defaultBrowserContext().overridePermissions(
     "https://meet.google.com/",
     ["microphone", "camera", "notifications"]
   );
@@ -139,7 +155,7 @@ async function main(email,password,meet_code,duration,port) {
   await logStep(page, "Open Google Meet");
   await page.waitForSelector('input[type="text"]');
   await page.click('input[type="text"]');
-  await page.keyboard.type(meet_code, { delay: 120 });
+  await page.keyboard.type(meetCode, { delay: 120 });
   await logStep(page, "Meeting code entered");
   await sleep(400);
   await page.keyboard.press('Enter');
@@ -152,7 +168,7 @@ async function main(email,password,meet_code,duration,port) {
   await logStep(page, "Enter and the desired element with all classes");
   await sleep(1000);
   await logStep(page, "Logged in to the conference");
-  await sleep(1000);
+  await sleep(5000);
   await page.keyboard.press('Enter');
 
   let buttons = await page.$$('[jsname="A5il2e"]');
@@ -182,124 +198,96 @@ async function main(email,password,meet_code,duration,port) {
   await logStep(page, "user_list");
   await sleep(1000);
   const ws = new WebSocket(`ws://localhost:${port}`);
-  let currentStream = null;
+sessionState.ws = ws;
 
-  ws.on("open", async () => {
-    console.log("🔌 WebSocket connected, waiting for 'restart-stream' commands...");
-    if (!currentStream) {
-      console.log("🟢 Starting initial stream...");
-      currentStream = await getStream(page, {
-        audio: true,
-        video: false,
-        mimeType: "audio/webm; codecs=opus",
-        audioBitsPerSecond: 128000
-      });
-  
-      currentStream.on("data", chunk => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(chunk);
-        }
-      });
-      
-      console.log("🎙️ Initial stream started.");
-    }
-    setTimeout(async () => {
-      console.log(`⏰ Duration (${duration} sec) elapsed. Cleaning up...`);
-  
-      if (currentStream) {
-        try {
-          currentStream.destroy();
-        } catch (err) {
-          console.warn("⚠️ Error destroying stream:", err);
-        }
-      }
-  
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close(); // вызовет ws.on("close")
-      }
-    }, duration * 1000);
-    
-    trackAndSendSpeakerVectors(page, Number(duration), ws)
-      .catch(e => console.error("Error in trackAndSendSpeakerVectors:", e));
+ws.on("open", async () => {
+  const currentStream = await getStream(page, {
+    audio: true,
+    video: false,
+    mimeType: "audio/webm; codecs=opus",
+    audioBitsPerSecond: 128000
   });
 
-  ws.on("message", async (msg) => {
+  sessionState.currentStream = currentStream;
+
+  currentStream.on("data", chunk => {
+    if (ws.readyState === WebSocket.OPEN) ws.send(chunk);
+  });
+
+  sessionState.speakerTrackerTask = trackAndSendSpeakerVectors(page, ws, sessionState);
+});
+
+ws.on("message", async (msg) => {
+  try {
     const command = msg.toString().trim();
     if (command === "restart-stream") {
-      console.log("🔁 Restart command received from Python.");
-
-      if (currentStream) {
-        try {
-          currentStream.destroy();
-        } catch (err) {
-          console.warn("⚠️ Error while destroying stream:", err);
-        }
+      if (sessionState.currentStream) {
+        try { sessionState.currentStream.destroy(); } catch {}
       }
 
-      currentStream = await getStream(page, {
-        audio: true,
-        video: false,
-        mimeType: "audio/webm; codecs=opus",
-        audioBitsPerSecond: 128000
-      });
+      if (!page || page.isClosed()) {
+        console.warn("⚠️ Page already closed, skipping restart");
+        return;
+      }
 
-      currentStream.on("data", chunk => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(chunk);
-        }
-      });
-
-      console.log("🎙️ New stream started.");
-    }
-  });
-
-  ws.on("close", async () => {
-    if (currentStream) {
       try {
-        currentStream.destroy();
+        const stream = await getStream(page, {
+          audio: true,
+          video: false,
+          mimeType: "audio/webm; codecs=opus",
+          audioBitsPerSecond: 128000
+        });
+
+        sessionState.currentStream = stream;
+        stream.on("data", chunk => {
+          if (ws.readyState === WebSocket.OPEN) ws.send(chunk);
+        });
       } catch (err) {
-        console.warn("⚠️ Error while destroying stream:", err);
+        console.error("❌ getStream failed:", err);
       }
     }
-    await browser.close();
-    (await wss).close();
-    console.log("⏹️ WebSocket closed. Browser and stream cleaned up.");
-  });
+  } catch (err) {
+    console.error("⚠️ Error handling message:", err);
+  }
+});
 }
-async function cleanupMeetSession(ws, browser, currentStream) {
-  console.log("🧹 Cleaning up Meet session...");
+
+async function cleanupMeetSession(sessionState) {
+  const { ws, browser, currentStream, speakerTrackerTask } = sessionState;
+  sessionState.terminateRequested = true;
 
   if (currentStream) {
-    try {
-      currentStream.destroy();
-      console.log("🛑 Stream destroyed");
-    } catch (err) {
-      console.warn("⚠️ Error destroying stream:", err);
-    }
+    try { currentStream.destroy(); } catch {}
   }
 
-  if (ws && ws.readyState === WebSocket.OPEN) {
+  if (ws && ws.readyState === ws.OPEN) {
     ws.close();
-    console.log("🔌 WebSocket closed");
+  }
+
+  if (speakerTrackerTask) {
+    try {
+      await speakerTrackerTask;
+    } catch (e) {
+      console.warn("⚠️ Error in speaker tracker:", e.message);
+    }
   }
 
   if (browser) {
-    try {
-      await browser.close();
-      console.log("🧼 Browser closed");
-    } catch (err) {
-      console.warn("⚠️ Error closing browser:", err);
-    }
+    try { await browser.close(); } catch {}
   }
 
-  try {
-    const server = await wss;
-    server.close();
-    console.log("🛑 WebSocket server closed");
-  } catch (err) {
-    console.warn("⚠️ Error closing WebSocket server:", err);
-  }
+  sessionState.browser = null;
+  sessionState.ws = null;
+  sessionState.currentStream = null;
+  sessionState.terminateRequested = false;
 
-  console.log("✅ Meet session cleanup complete.");
+  console.log("✅ Session fully cleaned up");
 }
-module.exports = { main,cleanupMeetSession };
+
+
+module.exports = {
+  launchBrowser,
+  joinMeetAndRecord,
+  main,
+  cleanupMeetSession
+};

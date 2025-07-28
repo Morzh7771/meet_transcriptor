@@ -16,9 +16,11 @@ class AudioServer:
         self.transcript_manager = TranscriptManager()
         self.speaker_tracker = SpeakerTracker()
         self.connection_closed = asyncio.Event()
+        self.websocket = None  # Храним единственное подключение от Puppeteer
 
     async def handler_whisper(self, ws):
         log.info(" Whisper WebSocket connected")
+        self.websocket = ws
         try:
             async for message in ws:
                 if isinstance(message, bytes):
@@ -46,7 +48,7 @@ class AudioServer:
             if "speakers" in data and "time" in data:
                 self.speaker_tracker.add_event(data)
         except json.JSONDecodeError:
-            log.warning("⚠️ Invalid JSON message:", message)
+            log.warning(f"⚠️ Invalid JSON message: {message}")
 
     async def start(self, meet_code, ws_port):
         session_id = f"{meet_code}_{time.strftime('%Y-%m-%d_%H-%M-%S')}"
@@ -55,11 +57,11 @@ class AudioServer:
             "transcripts": os.path.join("recordings", "transcripts", session_id),
             "full": os.path.join("recordings", "full", session_id)
         }
-        
+
         for path in paths.values():
             os.makedirs(path, exist_ok=True)
 
-        # Initialize all components with paths
+        # Установим пути во все компоненты
         for component in [self.chunk_handler, self.transcript_manager, self.speaker_tracker]:
             component.set_paths(paths)
 
@@ -76,13 +78,32 @@ class AudioServer:
             log.info(" WebSocket server closed")
 
     async def _finalize_session(self):
-        # Finalize last chunk if exists
         if self.chunk_handler.has_data():
             webm_path, timestamp = self.chunk_handler.finalize()
             if webm_path:
                 await self.transcript_manager.transcribe_chunk(webm_path, timestamp)
                 self.speaker_tracker.save_buffer(timestamp)
 
-        # Save all outputs
         self.transcript_manager.save_full()
         self.speaker_tracker.save_timeline()
+
+    async def terminate(self):
+        log.info("🚨 Terminating session manually")
+
+        if self.websocket:
+            try:
+                await self.websocket.send("terminate")
+                log.info("📨 Sent 'terminate' message to websocket")
+            except Exception as e:
+                log.warning(f"⚠️ Could not send terminate: {e}")
+
+            try:
+                await self.websocket.close()
+                log.info("✅ WebSocket closed")
+            except Exception as e:
+                log.warning(f"⚠️ Could not close websocket: {e}")
+        else:
+            log.warning("⚠️ No websocket to terminate")
+
+        self.connection_closed.set()
+
