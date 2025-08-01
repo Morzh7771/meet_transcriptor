@@ -17,7 +17,8 @@ class Facade:
         self.password = os.getenv("PASSWORD")
         self.backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)
-        self.arr = ["mmi-guyd-ibh", "cqf-zeyo-hpe", "pbe-qqpx-rxy"]
+        # self.arr = ["mmi-guyd-ibh", "cqf-zeyo-hpe", "pbe-qqpx-rxy"]
+        self.arr = ["mha-bbsk-qkw"]
 
     async def find_free_port(self, max_attempts=1000):
         tried_ports = set()

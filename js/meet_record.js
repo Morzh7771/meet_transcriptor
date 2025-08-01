@@ -69,6 +69,9 @@ async function trackAndSendSpeakerVectors(page, ws, sessionState,time_start) {
     try {
       const vector = await page.evaluate((startTime) => {
         const cards = Array.from(document.querySelectorAll('div.cxdMu.KV1GEc[aria-label]'));
+        if (!cards.length) {
+          console.warn("⚠️ No speaker cards found");
+        }
         const speakers = {};
         cards.forEach(card => {
           const name = card.getAttribute('aria-label');
