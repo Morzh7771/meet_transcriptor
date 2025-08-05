@@ -42,26 +42,20 @@ class Facade:
             ws_port = await self.find_free_port()
             log.info(f"🚀 Starting parallel session for meet: {meet_code} on port {ws_port}")
 
-            # новый экземпляр AudioServer для каждой сессии
             audio_server = AudioServer()
 
-            # задаём подзадачу, оборачиваем в async def чтобы изолировать переменные
             task = asyncio.create_task(self._start_recording_session(audio_server, meet_code, ws_port))
             tasks.append(task)
 
-        # дожидаемся завершения всех сессий
         await asyncio.gather(*tasks)
         log.info("✅ All sessions completed.")
 
     async def _start_recording_session(self, audio_server: AudioServer, meet_code: str, ws_port: int):
         try:
-            # запускаем WebSocket сервер и слушаем
             ws_task = asyncio.create_task(audio_server.start(meet_code, ws_port))
-            await asyncio.sleep(1)  # минимальное ожидание, чтобы JS успел отправить запрос
-            # запускаем JS плагин (подключается к WebSocket, запускает мит)
+            await asyncio.sleep(1) 
             await self.js_plugin_api.connect(meet_code, ws_port)
 
-            # ждём завершения WebSocket сервера
             await ws_task
 
             log.info(f"🛑 Session for {meet_code} complete.")

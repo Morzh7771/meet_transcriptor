@@ -2,7 +2,7 @@ const { launchBrowser, joinMeetAndRecord } = require("./meet_record");
 
 class SessionManager {
   constructor() {
-    this.sessions = new Map(); // sessionId → session object
+    this.sessions = new Map(); // sessionId → session data
   }
 
   async startSession(email, password, sessionId, meetCode, wsPort) {
@@ -25,16 +25,14 @@ class SessionManager {
 
       this.sessions.set(sessionId, session);
 
-      console.log(`✅ Started session ${sessionId} for meet ${meetCode}`);
-
       joinMeetAndRecord(email, password, session, page, meetCode, wsPort)
         .catch(err => {
-          console.error(`❌ Session ${sessionId} crashed:`, err.message);
-        })
+          console.error(`Session ${sessionId} crashed:`, err.message);
+        });
 
       return { status: "started", sessionId };
     } catch (err) {
-      console.error("🔥 Failed to start session:", err);
+      console.error("Failed to start session:", err);
       return { status: "error", message: err.message };
     }
   }
@@ -49,7 +47,7 @@ class SessionManager {
       try {
         await session.page.close();
       } catch (e) {
-        console.warn("⚠️ Failed to close page:", e.message);
+        console.warn("Page close failed:", e.message);
       }
     }
 
@@ -57,7 +55,7 @@ class SessionManager {
       try {
         await session.speakerTrackerTask;
       } catch (e) {
-        console.warn("⚠️ Error in speaker tracker:", e.message);
+        console.warn("Speaker tracker error:", e.message);
       }
     }
 
@@ -68,14 +66,14 @@ class SessionManager {
           await session.browser.close();
         }
       } catch (e) {
-        console.warn("⚠️ Failed to close browser:", e.message);
+        console.warn("Browser close failed:", e.message);
       }
     }
 
     if (session.currentStream) {
       try {
         session.currentStream.destroy();
-      } catch (e) {}
+      } catch {}
     }
 
     if (session.ws && session.ws.readyState === session.ws.OPEN) {
@@ -83,21 +81,21 @@ class SessionManager {
     }
 
     this.sessions.delete(sessionId);
-    console.log(`🧹 Session ${sessionId} cleaned up`);
-  }
-
-  listSessions() {
-    return Array.from(this.sessions.values()).map(s => ({
-      sessionId: s.sessionId,
-      meetCode: s.meetCode,
-    }));
   }
 
   async terminate(sessionId) {
     const session = this.sessions.get(sessionId);
     if (!session) return { status: "not found" };
+
     await this.cleanup(sessionId);
     return { status: "terminated" };
+  }
+
+  listSessions() {
+    return Array.from(this.sessions.values()).map(session => ({
+      sessionId: session.sessionId,
+      meetCode: session.meetCode,
+    }));
   }
 }
 

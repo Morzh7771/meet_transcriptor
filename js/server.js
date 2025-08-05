@@ -1,4 +1,3 @@
-
 const express = require("express");
 const { first_login, submit2FACode } = require("./first_login");
 const { SessionManager } = require("./sessionManager");
@@ -19,14 +18,13 @@ app.post("/login", (req, res) => {
 
   void (async () => {
     try {
-      console.log(`👤 Launching login for ${email}. Waiting for 2FA code in terminal...`);
       await first_login(email, password, phone);
     } catch (err) {
-      console.error("❌ Error inside async first_login():", err);
+      console.error("Login error:", err);
     }
   })();
 
-  res.status(200).json({ status: "Login started in background. Check terminal for 2FA." });
+  res.status(200).json({ status: "Login started. Check terminal for 2FA." });
 });
 
 app.post("/submit-2fa", (req, res) => {
@@ -40,29 +38,30 @@ app.post("/submit-2fa", (req, res) => {
     try {
       await submit2FACode(code);
     } catch (err) {
-      console.error("❌ Error inside async submit2FACode():", err);
+      console.error("2FA submit error:", err);
     }
   })();
 
-  res.status(200).json({ status: "2FA code submitted. Finishing login in background." });
+  res.status(200).json({ status: "2FA code submitted." });
 });
 
 app.post("/start", async (req, res) => {
   const { email, password, meetCode, port } = req.body;
+
   if (!email || !password || !meetCode || !port) {
     return res.status(400).json({ error: "Missing required parameters." });
   }
 
   const sessionId = uuidv4();
+
   try {
-    const result = await sessionManager.startSession(email, password,sessionId, meetCode, port);
+    const result = await sessionManager.startSession(email, password, sessionId, meetCode, port);
     res.status(200).json({ ...result, sessionId });
   } catch (err) {
-    console.error("❌ Failed to start session:", err);
-    res.status(500).json({ error: "Failed to start session." });
+    console.error("Failed to start session:", err);
+    res.status(500).json({ error: "Internal server error." });
   }
 });
-
 
 app.post("/terminate", async (req, res) => {
   const { sessionId } = req.body;
@@ -75,5 +74,5 @@ app.get("/list", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
