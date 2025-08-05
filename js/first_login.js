@@ -4,27 +4,32 @@ const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const { launch } = require("puppeteer-stream");
 const fs = require("fs");
 const { executablePath } = require("puppeteer");
+const { start } = require("repl");
 
 puppeteer.use(StealthPlugin());
 
 let browser, page;
 
-const sleep = ms => new Promise(res => setTimeout(res, ms));
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
 let stepCounter = 1;
 async function logStep(page, message) {
-  const filename = `js/screenshots/login/step_${String(stepCounter++).padStart(2, "0")}_${message.replace(/\s+/g, "_")}.png`;
+  const filename = `js/screenshots/login/step_${String(stepCounter++).padStart(
+    2,
+    "0"
+  )}_${message.replace(/\s+/g, "_")}.png`;
   await page.screenshot({ path: filename, fullPage: true });
   console.log(`📸 ${message} — screenshot saved: ${filename}`);
 }
 
 async function startLogin(email, password, phone) {
-  if (!fs.existsSync("js/screenshots/login")) fs.mkdirSync("js/screenshots/login");
+  if (!fs.existsSync("js/screenshots/login"))
+    fs.mkdirSync("js/screenshots/login");
 
   browser = await launch({
     headless: false,
     executablePath: executablePath(),
-    ignoreDefaultArgs: ['--mute-audio'],
+    ignoreDefaultArgs: ["--mute-audio"],
     args: [
       "--disable-notifications",
       "--window-size=1280,1200",
@@ -35,8 +40,16 @@ async function startLogin(email, password, phone) {
   });
 
   page = await browser.newPage();
-  await page.goto("https://accounts.google.com/", { waitUntil: "networkidle2" });
-  await browser.defaultBrowserContext().overridePermissions("https://meet.google.com/", ["microphone", "camera", "notifications"]);
+  await page.goto("https://accounts.google.com/", {
+    waitUntil: "networkidle2",
+  });
+  await browser
+    .defaultBrowserContext()
+    .overridePermissions("https://meet.google.com/", [
+      "microphone",
+      "camera",
+      "notifications",
+    ]);
   await logStep(page, "Login page is open");
 
   await page.waitForSelector('input[type="email"]');
@@ -58,7 +71,7 @@ async function startLogin(email, password, phone) {
 
   if (phone) {
     await page.keyboard.type(phone, { delay: 120 });
-    await page.keyboard.press('Enter');
+    await page.keyboard.press("Enter");
     await sleep(4000);
   }
 
@@ -69,7 +82,7 @@ async function submit2FACode(code) {
   if (!page) throw new Error("Login session not started");
 
   await page.keyboard.type(code, { delay: 120 });
-  await page.keyboard.press('Enter');
+  await page.keyboard.press("Enter");
   await page.waitForNavigation({ waitUntil: "networkidle2" });
   await logStep(page, "2FA code submitted and login complete");
 

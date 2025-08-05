@@ -17,6 +17,7 @@ class AudioServer:
         self.speaker_tracker = SpeakerTracker()
         self.connection_closed = asyncio.Event()
         self.websocket = None  # Храним единственное подключение от Puppeteer
+        self.chunk_index = -1 # for some reason???
 
     async def handler_whisper(self, ws):
         log.info(" Whisper WebSocket connected")
@@ -30,14 +31,17 @@ class AudioServer:
         except websockets.exceptions.ConnectionClosed:
             log.warning("🛑 Whisper WebSocket disconnected")
         finally:
+            log.info("💡 [FINALLY] Calling connection_closed.set()")
             self.connection_closed.set()
+            log.info("🛑 connection_closed.set() closed")
 
     async def _handle_audio_data(self, data, ws):
         self.chunk_handler.add_data(data)
         if self.chunk_handler.should_finalize():
             webm_path, timestamp = self.chunk_handler.finalize()
             if webm_path:
-                asyncio.create_task(self.transcript_manager.transcribe_chunk(webm_path, timestamp))
+                asyncio.create_task(self.transcript_manager.transcribe_chunk(webm_path, timestamp, self.chunk_index))
+                self.chunk_index += 1
                 self.speaker_tracker.save_buffer(timestamp)
                 await ws.send("restart-stream")
                 await asyncio.sleep(0.1)
@@ -64,6 +68,7 @@ class AudioServer:
         # Установим пути во все компоненты
         for component in [self.chunk_handler, self.transcript_manager, self.speaker_tracker]:
             component.set_paths(paths)
+        self.transcript_manager.reset_transcript_buffer()
 
         log.info(f" Starting Whisper WebSocket server on port {ws_port}")
         server = await websockets.serve(self.handler_whisper, "localhost", ws_port)
@@ -81,11 +86,18 @@ class AudioServer:
         if self.chunk_handler.has_data():
             webm_path, timestamp = self.chunk_handler.finalize()
             if webm_path:
-                await self.transcript_manager.transcribe_chunk(webm_path, timestamp)
+                await self.transcript_manager.transcribe_chunk(webm_path, timestamp, self.chunk_index)
+                self.chunk_index += 1
                 self.speaker_tracker.save_buffer(timestamp)
 
-        self.transcript_manager.save_full()
+        full_audio_path = self.transcript_manager.save_full()
         self.speaker_tracker.save_timeline()
+
+        # Whisper does the whole transcript (with the roles)
+        if not os.path.exists(full_audio_path) or os.path.getsize(full_audio_path) < 1024:
+            log.error(f"❌ Skipping Whisper full transcription — file not found or too small: {full_audio_path}")
+            return
+        await self.transcript_manager.transcribe_and_save_full_recording(full_audio_path)
 
     async def terminate(self):
         log.info("🚨 Terminating session manually")

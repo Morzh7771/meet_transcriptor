@@ -17,7 +17,7 @@ class Transcriber:
             raise ValueError("OPENAI_API_KEY is missing in .env")
         self.client = OpenAI(api_key=api_key)
 
-    async def transcribe(self, webm_file: str) -> str:
+    async def transcribe(self, webm_file: str, return_segments: bool = False, language: str = "en") -> str:
         log.info(f" Sending file {webm_file} to Whisper API...")
         client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -26,9 +26,27 @@ class Transcriber:
         try:
             response = await client.audio.transcriptions.create(
                 model="whisper-1",
-                file=(webm_file, data)
+                file=(webm_file, data),
+                response_format="verbose_json" if return_segments else "text",
+                language=language
             )
+            if return_segments:
+                return {
+                    "text": response.text,
+                    "segments": [
+                        {
+                            "start": s.start,
+                            "end": s.end,
+                            "text": s.text
+                        } for s in response.segments
+                    ]
+                }
             return response.text
         except Exception as e:
             log.error(f"❌ Whisper error: {e}")
             return ""
+    
+    async def match_transcript_speakers(self, real_time_transcript, afterwards_transcript):
+        transcript = ""
+        
+        return transcript
