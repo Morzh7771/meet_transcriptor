@@ -13,7 +13,7 @@ log = CustomLog()
 
 class Facade:
     def __init__(self):
-        self.email = os.getenv("EMAIL")
+        self.email = os.getenv("ACC")
         self.password = os.getenv("PASSWORD")
         self.backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)

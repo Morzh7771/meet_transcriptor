@@ -264,66 +264,28 @@ class TranscriptManager:
                     outfile.write(infile.read() + "\t")
         log.info(f" Full transcript saved: {file_path}")
 
-    def _merge_audio(self) -> str:
-        """
-        Сшивает все chunk_*.webm в full_audio.webm.
-        Возвращает путь к итоговому файлу или '' при ошибке.
-        """
-
-        # ⏳ небольшая пауза перед началом работы
-        time.sleep(5)
-
-        # 1️⃣  Собираем чанк-файлы
-        audio_dir = Path(self.paths["audio"])
-        session_dir = Path(self.paths["full"])
-        session_dir.mkdir(parents=True, exist_ok=True)
-
-        webm_files = sorted(audio_dir.glob("chunk_*.webm"))
-        log.info("Found chunks: %s", webm_files)
-
-        valid_files = [f for f in webm_files if f.stat().st_size > 1_024]
+    def _merge_audio(self):
+        webm_files = sorted(glob(os.path.join(self.paths["audio"], "chunk_*.webm")))
+        valid_files = [f for f in webm_files if os.path.getsize(f) > 1024]
+        
         if not valid_files:
             log.error("❌ No valid audio chunks for merging")
-            return ""
+            return
 
-        # 2️⃣  Создаём concat_list.txt (абсолютные пути в posix-формате)
-        concat_file = session_dir / "concat_list.txt"
-        with concat_file.open("w", encoding="utf-8") as f:
-            for p in valid_files:
-                f.write(f"file '{p.resolve().as_posix()}'\n")
+        concat_file = os.path.join(self.paths["full"], "concat_list.txt")
+        output_file = os.path.join(self.paths["full"], "full_audio.webm")
 
-        output_file = session_dir / "full_audio.webm"
-        log.info("Concatenating %d files into %s", len(valid_files), output_file)
+        with open(concat_file, "w", encoding="utf-8") as f:
+            for path in valid_files:
+                f.write(f"file '{os.path.abspath(path)}'\n")
 
-        # 3️⃣  Функция-обёртка для запуска FFmpeg
-        def _run_ffmpeg(cmd: list[str], desc: str) -> bool:
-            try:
-                subprocess.run(
-                    cmd, check=True, cwd=session_dir,
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-                )
-                log.info("✅ %s succeeded", desc)
-                return True
-            except subprocess.CalledProcessError as e:
-                log.error("❌ %s failed (code %s):\n%s",
-                        desc, e.returncode, e.stderr.strip())
-                return False
+        try:
+            subprocess.run([
+                "ffmpeg", "-f", "concat", "-safe", "0", "-i", concat_file, 
+                "-c", "copy", output_file
+            ], check=True)
+            log.info(f" Full audio saved: {output_file}")
+        except subprocess.CalledProcessError as e:
+            log.error("❌ FFmpeg merge error:", e)
 
-        base_cmd = [
-            "ffmpeg", "-y", "-loglevel", "error",
-            "-f", "concat", "-safe", "0", "-i", str(concat_file)
-        ]
-
-        # ▶️ Попытка №1 — без перекодирования
-        if _run_ffmpeg(base_cmd + ["-c", "copy", str(output_file)],
-                    "FFmpeg merge (-c copy)"):
-            return str(output_file)
-
-        # ▶️ Попытка №2 — перекодируем в Opus
-        if _run_ffmpeg(base_cmd + ["-c:a", "libopus", str(output_file)],
-                    "FFmpeg merge (re-encode)"):
-            return str(output_file)
-
-        # Если обе попытки не удались — бросаем исключение
-        raise RuntimeError("FFmpeg merge failed after re-encode")
 
