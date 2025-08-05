@@ -45,3 +45,8 @@ class Transcriber:
         except Exception as e:
             log.error(f"❌ Whisper error: {e}")
             return ""
+    
+    async def match_transcript_speakers(self, real_time_transcript, afterwards_transcript):
+        transcript = ""
+        
+        return transcript

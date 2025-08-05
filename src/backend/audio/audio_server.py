@@ -40,7 +40,7 @@ class AudioServer:
         if self.chunk_handler.should_finalize():
             webm_path, timestamp = self.chunk_handler.finalize()
             if webm_path:
-                asyncio.create_task(self.transcript_manager.transcribe_chunk_full(webm_path, timestamp, self.chunk_index))
+                asyncio.create_task(self.transcript_manager.transcribe_chunk(webm_path, timestamp, self.chunk_index))
                 self.chunk_index += 1
                 self.speaker_tracker.save_buffer(timestamp)
                 await ws.send("restart-stream")
@@ -86,13 +86,18 @@ class AudioServer:
         if self.chunk_handler.has_data():
             webm_path, timestamp = self.chunk_handler.finalize()
             if webm_path:
-                await self.transcript_manager.transcribe_chunk_full(webm_path, timestamp, self.chunk_index)
+                await self.transcript_manager.transcribe_chunk(webm_path, timestamp, self.chunk_index)
                 self.chunk_index += 1
                 self.speaker_tracker.save_buffer(timestamp)
 
-        # self.transcript_manager.save_full()
+        full_audio_path = self.transcript_manager.save_full()
         self.speaker_tracker.save_timeline()
-        self.transcript_manager.save_full_transcript()
+
+        # Whisper does the whole transcript (with the roles)
+        if not os.path.exists(full_audio_path) or os.path.getsize(full_audio_path) < 1024:
+            log.error(f"❌ Skipping Whisper full transcription — file not found or too small: {full_audio_path}")
+            return
+        await self.transcript_manager.transcribe_and_save_full_recording(full_audio_path)
 
     async def terminate(self):
         log.info("🚨 Terminating session manually")
