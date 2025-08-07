@@ -4,7 +4,6 @@ const { launch, getStream } = require("puppeteer-stream");
 const fs = require("fs");
 const { executablePath } = require("puppeteer");
 const WebSocket = require("ws");
-const { log } = require("console");
 
 puppeteer.use(StealthPlugin());
 
@@ -15,29 +14,25 @@ const TARGET_CLASS_LIST = [
   "UywwFc-StrnGf-YYd4I-VtOx3e",
   "tusd3",
   "IyLmn",
-  "QJgqC",
+  "QJgqC"
 ];
 
-const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+const sleep = ms => new Promise(res => setTimeout(res, ms));
 
 let stepCounter = 1;
 async function logStep(page, message) {
-  const filename = `js/screenshots/step_${String(stepCounter++).padStart(
-    2,
-    "0"
-  )}_${message.replace(/\s+/g, "_")}.png`;
+  const filename = `js/screenshots/step_${String(stepCounter++).padStart(2, "0")}_${message.replace(/\s+/g, "_")}.png`;
   await page.screenshot({ path: filename, fullPage: true });
 }
 
 async function tabUntilAllClassesMatch(page, maxSteps = 30) {
-  await page.keyboard.press("Enter");
+  await page.keyboard.press('Enter');
   for (let i = 0; i < maxSteps; i++) {
     await page.keyboard.press("Tab");
     await sleep(500);
 
     const activeInfo = await page.evaluate(() => {
       const el = document.activeElement;
-      console.log("Active element:", el);
       return {
         tag: el?.tagName || "",
         classList: Array.from(el?.classList || []),
@@ -45,10 +40,9 @@ async function tabUntilAllClassesMatch(page, maxSteps = 30) {
       };
     });
 
-    const hasAllClasses = TARGET_CLASS_LIST.every((cls) =>
+    const hasAllClasses = TARGET_CLASS_LIST.every(cls =>
       activeInfo.classList.includes(cls)
     );
-    console.log("Insode the tabUntilAllClassesMatch");
 
     if (hasAllClasses) return true;
   }
@@ -57,40 +51,30 @@ async function tabUntilAllClassesMatch(page, maxSteps = 30) {
 }
 
 async function trackAndSendSpeakerVectors(page, ws, sessionState, time_start) {
-  console.log("I am in the trackAndSendSpeakerVectors function");
   while (!sessionState.terminateRequested) {
     if (!page || page.isClosed()) {
       sessionState.terminateRequested = true;
       break;
     }
-    console.log(
-      "I am in the trackAndSendSpeakerVectors function, session is not terminated"
-    );
+
     try {
       const vector = await page.evaluate((startTime) => {
-        const cards = Array.from(
-          document.querySelectorAll("div.cxdMu.KV1GEc[aria-label]")
-        );
+        const cards = Array.from(document.querySelectorAll('div.cxdMu.KV1GEc[aria-label]'));
         if (!cards.length) {
           console.warn("⚠️ No speaker cards found");
         }
         const speakers = {};
-        console.log(
-          "I am in the trackAndSendSpeakerVectors function, trying to find speakers and who is talking"
-        );
-        cards.forEach((card) => {
-          const name = card.getAttribute("aria-label");
+        cards.forEach(card => {
+          const name = card.getAttribute('aria-label');
           const indicator = card.querySelector('div[jsname="QgSmzd"]');
-          const isSpeaking = indicator
-            ? !indicator.classList.contains("gjg47c")
-            : false;
+          const isSpeaking = indicator ? !indicator.classList.contains('gjg47c') : false;
           speakers[name] = isSpeaking;
         });
         return { time: Date.now() - startTime, speakers };
       }, time_start);
 
       console.log("🕒 Time:", vector.time, "ms | 🎙 Speakers:", vector.speakers);
-
+      
       if (ws && ws.readyState === ws.OPEN) {
         ws.send(JSON.stringify(vector));
       }
@@ -106,7 +90,7 @@ async function launchBrowser() {
   const browser = await launch({
     headless: false,
     executablePath: executablePath(),
-    ignoreDefaultArgs: ["--mute-audio"],
+    ignoreDefaultArgs: ['--mute-audio'],
     args: [
       "--disable-notifications",
       "--window-size=1920,1080",
@@ -121,37 +105,18 @@ async function launchBrowser() {
   });
 
   const page = await browser.newPage();
-  page.on("console", (msg) => {
-    console.log("Браузерна консоль:", msg.text()); // Лог кожного повідомлення з консолі браузера
-  });
   return { browser, page };
 }
 
-async function joinMeetAndRecord(
-  email,
-  password,
-  sessionState,
-  page,
-  meetCode,
-  port
-) {
+async function joinMeetAndRecord(email, password, sessionState, page, meetCode, port) {
   await main(email, password, meetCode, port, sessionState, page);
 }
 
 async function main(email, password, meetCode, port, sessionState, page) {
   if (!fs.existsSync("js/screenshots")) fs.mkdirSync("js/screenshots");
 
-  await page.goto("https://accounts.google.com/", {
-    waitUntil: "networkidle2",
-  });
-  await page
-    .browser()
-    .defaultBrowserContext()
-    .overridePermissions("https://meet.google.com/", [
-      "microphone",
-      "camera",
-      "notifications",
-    ]);
+  await page.goto("https://accounts.google.com/", { waitUntil: "networkidle2" });
+  await page.browser().defaultBrowserContext().overridePermissions("https://meet.google.com/", ["microphone", "camera", "notifications"]);
   await logStep(page, "Login page");
 
   await page.waitForSelector('input[type="email"]');
@@ -177,7 +142,7 @@ async function main(email, password, meetCode, port, sessionState, page) {
   await page.keyboard.type(meetCode, { delay: 120 });
   await logStep(page, "Meeting code typed");
   await sleep(400);
-  await page.keyboard.press("Enter");
+  await page.keyboard.press('Enter');
   await page.waitForNavigation({ waitUntil: "networkidle2" });
   await logStep(page, "Meeting page");
 
@@ -187,13 +152,11 @@ async function main(email, password, meetCode, port, sessionState, page) {
   await sleep(1000);
   await logStep(page, "Meeting entered");
   await sleep(5000);
-  await page.keyboard.press("Enter");
+  await page.keyboard.press('Enter');
 
   let buttons = await page.$$('[jsname="A5il2e"]');
   if (buttons.length === 0) {
-    const opener = await page.$(
-      '[class="VYBDae-Bz112c-LgbsSe VYBDae-Bz112c-LgbsSe-OWXEXe-SfQLQb-suEOdc hk9qKe S5GDme Ld74n"]'
-    );
+    const opener = await page.$('[class="VYBDae-Bz112c-LgbsSe VYBDae-Bz112c-LgbsSe-OWXEXe-SfQLQb-suEOdc hk9qKe S5GDme Ld74n"]');
     if (opener) {
       await opener.click();
       await sleep(1000);
@@ -203,9 +166,7 @@ async function main(email, password, meetCode, port, sessionState, page) {
 
   if (buttons.length > 0) {
     for (const btn of buttons) {
-      const hasPeopleIcon = await btn
-        .$eval("i", (i) => i.textContent.includes("people"))
-        .catch(() => false);
+      const hasPeopleIcon = await btn.$eval('i', i => i.textContent.includes('people')).catch(() => false);
       if (hasPeopleIcon) {
         await btn.click();
         break;
@@ -218,23 +179,6 @@ async function main(email, password, meetCode, port, sessionState, page) {
 
   const time_start = Date.now();
   const ws = new WebSocket(`ws://localhost:${port}`);
-
-  ws.on("open", () => {
-    console.log("WebSocket підключено!"); // Лог для перевірки, чи WebSocket відкрито
-  });
-
-  ws.on("message", (msg) => {
-    console.log("Повідомлення від WebSocket:", msg); // Лог для кожного отриманого повідомлення
-  });
-
-  ws.on("close", () => {
-    console.log("WebSocket закрито!"); // Лог для перевірки, коли WebSocket закривається
-  });
-
-  ws.on("error", (err) => {
-    console.error("WebSocket помилка:", err); // Лог для обробки помилок
-  });
-
   sessionState.ws = ws;
 
   ws.on("open", async () => {
@@ -242,30 +186,23 @@ async function main(email, password, meetCode, port, sessionState, page) {
       audio: true,
       video: false,
       mimeType: "audio/webm; codecs=opus",
-      audioBitsPerSecond: 128000,
+      audioBitsPerSecond: 128000
     });
 
     sessionState.currentStream = currentStream;
 
-    currentStream.on("data", (chunk) => {
+    currentStream.on("data", chunk => {
       if (ws.readyState === WebSocket.OPEN) ws.send(chunk);
     });
 
-    sessionState.speakerTrackerTask = trackAndSendSpeakerVectors(
-      page,
-      ws,
-      sessionState,
-      time_start
-    );
+    sessionState.speakerTrackerTask = trackAndSendSpeakerVectors(page, ws, sessionState, time_start);
   });
 
   ws.on("message", async (msg) => {
     const command = msg.toString().trim();
     if (command === "restart-stream") {
       if (sessionState.currentStream) {
-        try {
-          sessionState.currentStream.destroy();
-        } catch {}
+        try { sessionState.currentStream.destroy(); } catch {}
       }
 
       if (!page || page.isClosed()) return;
@@ -275,11 +212,11 @@ async function main(email, password, meetCode, port, sessionState, page) {
           audio: true,
           video: false,
           mimeType: "audio/webm; codecs=opus",
-          audioBitsPerSecond: 128000,
+          audioBitsPerSecond: 128000
         });
 
         sessionState.currentStream = stream;
-        stream.on("data", (chunk) => {
+        stream.on("data", chunk => {
           if (ws.readyState === WebSocket.OPEN) ws.send(chunk);
         });
       } catch {}
@@ -292,9 +229,7 @@ async function cleanupMeetSession(sessionState) {
   sessionState.terminateRequested = true;
 
   if (currentStream) {
-    try {
-      currentStream.destroy();
-    } catch {}
+    try { currentStream.destroy(); } catch {}
   }
 
   if (ws && ws.readyState === ws.OPEN) {
@@ -308,9 +243,7 @@ async function cleanupMeetSession(sessionState) {
   }
 
   if (browser) {
-    try {
-      await browser.close();
-    } catch {}
+    try { await browser.close(); } catch {}
   }
 
   sessionState.browser = null;
@@ -323,5 +256,5 @@ module.exports = {
   launchBrowser,
   joinMeetAndRecord,
   main,
-  cleanupMeetSession,
+  cleanupMeetSession
 };

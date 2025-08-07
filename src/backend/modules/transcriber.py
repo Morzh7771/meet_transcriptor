@@ -30,7 +30,7 @@ class Transcriber(BaseFacade):
         async with aiofiles.open(webm_file, 'rb') as f:
             data = await f.read()
         try:
-            response = self.audio_completion(webm_file, data, return_segments, language)
+            response = await self.audio_completion(webm_file, data, return_segments, language)
             return response
         except Exception as e:
             log.error(f"❌ Whisper error: {e}")

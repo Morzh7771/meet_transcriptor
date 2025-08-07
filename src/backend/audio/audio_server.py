@@ -26,7 +26,7 @@ class AudioServer:
         try:
             log.info("inside try-except")
             async for message in ws:
-                log.info("inside for message in ws")
+                #log.info("inside for message in ws")
                 if isinstance(message, bytes):
                     await self._handle_audio_data(message, ws)
                 elif isinstance(message, str):
