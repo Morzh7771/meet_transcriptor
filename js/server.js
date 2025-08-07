@@ -53,6 +53,7 @@ app.post("/start", async (req, res) => {
   }
 
   const sessionId = uuidv4();
+  console.log("SessionId is: ", sessionId);
 
   try {
     const result = await sessionManager.startSession(email, password, sessionId, meetCode, port);

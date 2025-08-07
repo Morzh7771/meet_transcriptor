@@ -35,7 +35,7 @@ class SpeakerTracker:
     def save_timeline(self):
         if not self.events:
             return
-            
+
         file_path = os.path.join(self.paths["full"], "speaker_timeline.json")
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(self.events, f, ensure_ascii=False, indent=2)

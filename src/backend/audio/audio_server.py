@@ -22,8 +22,11 @@ class AudioServer:
     async def handler_whisper(self, ws):
         log.info(" Whisper WebSocket connected")
         self.websocket = ws
+        log.info("after definition of self.websocket")
         try:
+            log.info("inside try-except")
             async for message in ws:
+                log.info("inside for message in ws")
                 if isinstance(message, bytes):
                     await self._handle_audio_data(message, ws)
                 elif isinstance(message, str):
@@ -92,11 +95,13 @@ class AudioServer:
 
         full_audio_path = self.transcript_manager.save_full()
         self.speaker_tracker.save_timeline()
+        log.info(f"Finished sacing timeline and the full_audio_path is: {full_audio_path}")
 
         # Whisper does the whole transcript (with the roles)
         if not os.path.exists(full_audio_path) or os.path.getsize(full_audio_path) < 1024:
             log.error(f"❌ Skipping Whisper full transcription — file not found or too small: {full_audio_path}")
             return
+        log.info("Starting transcription and saving it of full audio")
         await self.transcript_manager.transcribe_and_save_full_recording(full_audio_path)
 
     async def terminate(self):

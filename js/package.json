@@ -16,7 +16,7 @@
     "googleapis": "^153.0.0",
     "nodemon": "^3.1.10",
     "puppeteer": "^24.12.1",
-    "puppeteer-core": "^24.12.1",
+    "puppeteer-core": "^24.16.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "puppeteer-stream": "^3.0.20",

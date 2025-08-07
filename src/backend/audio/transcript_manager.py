@@ -6,7 +6,8 @@ import time
 from pydub import AudioSegment
 import tempfile
 import math
-from src.backend.llm.transcriber import Transcriber
+# from src.backend.llm.transcriber import Transcriber
+from src.backend.modules.transcriber import Transcriber
 from src.backend.utils.logger import CustomLog
 from pathlib import Path
 
@@ -132,7 +133,7 @@ class TranscriptManager:
         log.info(f" Transcribing: {webm_path}")
         # log.info(f"Current time in transcribe_chunk is: {time.time()}")
         try:
-            result = await self.transcriber.transcribe(webm_path, return_segments=True, language="uk")
+            result = await self.transcriber.transcribe(webm_path, return_segments=True) # language="uk"
             text_lines = []
 
             speaker_meta_path = os.path.join(self.paths["transcripts"],
@@ -150,9 +151,8 @@ class TranscriptManager:
                     log.error("❌ Could not parse response from Whisper as JSON")
                     return
 
-            for seg in result["segments"]:  # [{start, end, text}]
+            for seg in result["segments"]:
                 log.info(f"The segment is: {seg}")
-                # mid_time = 10020 * chunk_index + ((seg["start"] + seg["end"]) / 2) * 1000
                 seg_abs_start = 10000 * chunk_index + seg["start"] * 1000
                 seg_abs_end = 10000 * chunk_index + seg["end"] * 1000
                 speaker = self.find_active_speaker(seg_abs_start, seg_abs_end, speaker_ranges)
@@ -160,10 +160,6 @@ class TranscriptManager:
                     text_lines.append(f"{speaker}: {seg['text'].strip()}")
 
             full_text = "\n".join(text_lines)
-
-            # file_path = os.path.join(self.paths["transcripts"], f"chunk_{timestamp}.txt")
-            # with open(file_path, "w", encoding="utf-8") as f:
-            #     f.write(full_text)
 
             self.full_transcript_buffer.extend(text_lines)
 
@@ -177,7 +173,10 @@ class TranscriptManager:
             log.error("❌ Nothing to transcribe: audio path is empty or file doesn't exist")
             return
 
+        log.info("Inside transcribe_and_save_full_recording before try-except")
+
         try:
+            log.info("Inside try-except")
             audio = AudioSegment.from_file(webm_path)
             duration_sec = len(audio) / 1000
             log.info(f"Full audio length: {duration_sec:.2f} seconds")
@@ -219,7 +218,7 @@ class TranscriptManager:
 
             # UNCOMMENT !!!!!!!!!
             # full_transcript = self.transcriber.match_transcript_speakers("\n".join(self.full_transcript_buffer), full_transcript_raw)
-
+            # log.info(f"The full transcript returned from llm call is: {full_transcript}")
             # full_transcript_path = os.path.join(self.paths["full"], "full_final_transcript.txt")
             # with open(full_transcript_path, "w", encoding="utf-8") as f:
             #     f.write(full_transcript)
@@ -267,10 +266,12 @@ class TranscriptManager:
     def _merge_audio(self):
         webm_files = sorted(glob(os.path.join(self.paths["audio"], "chunk_*.webm")))
         valid_files = [f for f in webm_files if os.path.getsize(f) > 1024]
+        log.info(f"The number of webm files is: {len(webm_files)}")
+        log.info(f"The number of valid files is: {len(valid_files)}")
         
         if not valid_files:
             log.error("❌ No valid audio chunks for merging")
-            return
+            return None
 
         concat_file = os.path.join(self.paths["full"], "concat_list.txt")
         output_file = os.path.join(self.paths["full"], "full_audio.webm")
@@ -285,7 +286,9 @@ class TranscriptManager:
                 "-c", "copy", output_file
             ], check=True)
             log.info(f" Full audio saved: {output_file}")
+            return output_file
         except subprocess.CalledProcessError as e:
             log.error("❌ FFmpeg merge error:", e)
+            return None
 
 

@@ -13,13 +13,13 @@ log = CustomLog()
 
 class Facade:
     def __init__(self):
-        self.email = os.getenv("ACC")
+        self.email = os.getenv("EMAIL")
         self.password = os.getenv("PASSWORD")
         self.backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)
         self.session_done = asyncio.Event()
         # self.arr = ["mmi-guyd-ibh", "cqf-zeyo-hpe", "pbe-qqpx-rxy"]
-        self.arr = ["rzt-ogbx-sfz"]
+        self.arr = ["pst-eckw-ugc"]
 
     async def find_free_port(self, max_attempts=1000):
         tried_ports = set()
