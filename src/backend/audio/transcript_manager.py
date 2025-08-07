@@ -197,7 +197,7 @@ class TranscriptManager:
 
                 try:
                     log.info(f"🧠 Transcribing chunk {i+1}/{num_chunks}")
-                    result = await self.transcriber.transcribe(chunk_path, language="uk")
+                    result = await self.transcriber.transcribe(chunk_path) # language="uk"
                     if result:
                         all_text.append(result.strip())
                     else:
@@ -216,12 +216,14 @@ class TranscriptManager:
 
             log.info(f"✅ Full transcript saved to: {file_path}")
 
-            # UNCOMMENT !!!!!!!!!
-            # full_transcript = self.transcriber.match_transcript_speakers("\n".join(self.full_transcript_buffer), full_transcript_raw)
-            # log.info(f"The full transcript returned from llm call is: {full_transcript}")
-            # full_transcript_path = os.path.join(self.paths["full"], "full_final_transcript.txt")
-            # with open(full_transcript_path, "w", encoding="utf-8") as f:
-            #     f.write(full_transcript)
+            full_transcript = await self.transcriber.match_transcript_speakers("\n".join(self.full_transcript_buffer), full_transcript_raw)
+            log.info(f"The full transcript returned from llm call is: {full_transcript}")
+            
+            full_transcript_path = os.path.join(self.paths["full"], "full_final_transcript.txt")
+            text = "\n".join([f"{segment.speaker}: {segment.text}" for segment in full_transcript])
+            
+            with open(full_transcript_path, "w", encoding="utf-8") as f:
+                f.write(text)
             
             self.reset_transcript_buffer()
 

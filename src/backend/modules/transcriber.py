@@ -24,7 +24,7 @@ class Transcriber(BaseFacade):
     def __init__(self):
         super().__init__()
 
-    async def transcribe(self, webm_file: str, return_segments: bool = False, language: str = "en") -> str:
+    async def transcribe(self, webm_file: str, return_segments: bool = False, language: str = None) -> str:
         log.info(f" Sending file {webm_file} to Whisper API...")
 
         async with aiofiles.open(webm_file, 'rb') as f:
@@ -42,8 +42,8 @@ class Transcriber(BaseFacade):
                                            real_time_transcript=real_time_transcript,
                                            post_meeting_transcript=afterwards_transcript))
     
-        print(messages)
+        # print(messages)
         
         result = await self.completion("gpt-4o", messages=messages, max_tokens=16000, output_model=MatchSpeakersOtput)
 
-        return result
+        return result.transcript
