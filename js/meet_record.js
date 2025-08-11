@@ -24,6 +24,73 @@ async function logStep(page, message) {
   const filename = `js/screenshots/step_${String(stepCounter++).padStart(2, "0")}_${message.replace(/\s+/g, "_")}.png`;
   await page.screenshot({ path: filename, fullPage: true });
 }
+async function open_dropdown(page){
+  let buttons = await page.$$('[jsname="A5il2e"]');
+  if (buttons.length === 0) {
+    await sleep(2000);                    
+    const opener = await page.$(
+      '.VYBDae-Bz112c-LgbsSe.VYBDae-Bz112c-LgbsSe-OWXEXe-SfQLQb-suEOdc.hk9qKe.S5GDme.Ld74n'
+    );
+    if (opener) {
+      await opener.click();
+      await sleep(1000);
+    }
+    buttons = await page.$$('[jsname="A5il2e"]');
+  }
+  await find_people(buttons)
+  await sleep(1500);
+  await find_chat(buttons)
+}
+async function find_people(buttons) {
+  if (buttons.length > 0) {
+    for (const btn of buttons) {
+      const hasPeopleIcon = await btn
+        .$eval('i', i => i.textContent.includes('people'))
+        .catch(() => false);
+      if (hasPeopleIcon) {
+        await btn.click();
+        break;
+      }
+    }
+  }
+  return true;
+}
+async function find_chat(buttons) {
+  if (buttons.length > 0) {
+    for (const btn of buttons) {
+      const hasPeopleIcon = await btn
+        .$eval('i', i => i.textContent.includes('chat'))
+        .catch(() => false);
+      if (hasPeopleIcon) {
+        await btn.click();
+        break;
+      }
+    }
+  }
+  return true;
+}
+
+async function wait_meet_join(page) {
+  const selectors = [
+    'div.XDoBEd-JGcpL-MkD1Ye.bXvFAe.plQnQb',
+    'div.U0e0y',
+  ];
+
+  await page.waitForFunction(
+    (selArray) =>
+      selArray.every((selector) => {
+        const el = document.querySelector(selector);
+        return (
+          !el ||
+          el.hidden ||
+          el.style.display === 'none' ||
+          el.offsetParent === null
+        );
+      }),
+    { polling: 'mutation', timeout: 0 },
+    selectors
+  );
+}
 
 async function tabUntilAllClassesMatch(page, maxSteps = 30) {
   await page.keyboard.press('Enter');
@@ -52,33 +119,81 @@ async function tabUntilAllClassesMatch(page, maxSteps = 30) {
 
 async function trackAndSendSpeakerVectors(page, ws, sessionState, time_start) {
   while (!sessionState.terminateRequested) {
+    // Abort if the Meet page is closed.
     if (!page || page.isClosed()) {
       sessionState.terminateRequested = true;
       break;
     }
 
     try {
-      const vector = await page.evaluate((startTime) => {
-        const cards = Array.from(document.querySelectorAll('div.cxdMu.KV1GEc[aria-label]'));
-        if (!cards.length) {
-          console.warn("⚠️ No speaker cards found");
-        }
+      const data = await page.evaluate((startTime) => {
+        /* ---------------------- SPEAKER CARDS ---------------------- */
+        const cards = Array.from(
+          document.querySelectorAll('div.cxdMu.KV1GEc[aria-label]')
+        );
         const speakers = {};
-        cards.forEach(card => {
+        cards.forEach((card) => {
           const name = card.getAttribute('aria-label');
           const indicator = card.querySelector('div[jsname="QgSmzd"]');
-          const isSpeaking = indicator ? !indicator.classList.contains('gjg47c') : false;
+          const isSpeaking =
+            indicator ? !indicator.classList.contains('gjg47c') : false;
           speakers[name] = isSpeaking;
         });
-        return { time: Date.now() - startTime, speakers };
+
+        /* ------------------------- CHAT --------------------------- */
+        const chatContainer = document.querySelector('div.Ge9Kpc.z38b6');
+        const chat = [];
+
+        if (chatContainer) {
+          // Each Ss4fHf element may contain one or many RLrADb message nodes.
+          const blocks = Array.from(chatContainer.querySelectorAll('div.Ss4fHf'));
+
+          blocks.forEach((block) => {
+            // Static sender name and timestamp for all messages within this block.
+            const senderName =
+              block.querySelector('.poVWob')?.innerText.trim() || '';
+            const timestamp =
+              block.querySelector('.MuzmKe')?.innerText.trim() || '';
+
+            // Grab every individual message inside the block.
+            const messages = Array.from(block.querySelectorAll('div.RLrADb'));
+            messages.forEach((msgNode) => {
+              const text =
+                msgNode.querySelector('[jsname="dTKtvb"]')?.innerText.trim() ||
+                '';
+              chat.push({
+                name: senderName,
+                time: timestamp,
+                massage: text, // field name requested by user
+              });
+            });
+          });
+        }
+
+        // return { time: Date.now() - startTime, speakers, chat };
+        return { time: Date.now(), speakers, chat };
       }, time_start);
 
-      console.log("🕒 Time:", vector.time, "ms | 🎙 Speakers:", vector.speakers);
-      
-      if (ws && ws.readyState === ws.OPEN) {
-        ws.send(JSON.stringify(vector));
+      console.log(
+        '🕒',
+        data.time,
+        'ms | 🎙',
+        JSON.stringify(data.speakers),
+        '| 💬 messages:',
+        data.chat
+      );
+
+      // Expand the participants fly-out if no speaker cards are detected.
+      if (Object.keys(data.speakers).length === 0) {
+        await open_dropdown(page);
       }
-    } catch {
+
+      // Stream the snapshot via WebSocket.
+      if (ws && ws.readyState === ws.OPEN) {
+        ws.send(JSON.stringify(data));
+      }
+    } catch (err) {
+      console.error('❌ trackAndSendSpeakerVectors error:', err);
       break;
     }
 
@@ -149,30 +264,16 @@ async function main(email, password, meetCode, port, sessionState, page) {
   await tabUntilAllClassesMatch(page);
   await page.keyboard.press("Enter");
   await logStep(page, "Joined meeting");
-  await sleep(1000);
+  await sleep(3000);
+
+  await wait_meet_join(page)
+
   await logStep(page, "Meeting entered");
   await sleep(5000);
   await page.keyboard.press('Enter');
+  await sleep(2000);
 
-  let buttons = await page.$$('[jsname="A5il2e"]');
-  if (buttons.length === 0) {
-    const opener = await page.$('[class="VYBDae-Bz112c-LgbsSe VYBDae-Bz112c-LgbsSe-OWXEXe-SfQLQb-suEOdc hk9qKe S5GDme Ld74n"]');
-    if (opener) {
-      await opener.click();
-      await sleep(1000);
-    }
-    buttons = await page.$$('[jsname="A5il2e"]');
-  }
-
-  if (buttons.length > 0) {
-    for (const btn of buttons) {
-      const hasPeopleIcon = await btn.$eval('i', i => i.textContent.includes('people')).catch(() => false);
-      if (hasPeopleIcon) {
-        await btn.click();
-        break;
-      }
-    }
-  }
+  await open_dropdown(page)
 
   await logStep(page, "Participants panel");
   await sleep(1000);

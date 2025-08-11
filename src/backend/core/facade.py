@@ -13,13 +13,13 @@ log = CustomLog()
 
 class Facade:
     def __init__(self):
-        self.email = os.getenv("ACC")
+        self.email = os.getenv("EMAIL")
         self.password = os.getenv("PASSWORD")
         self.backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)
         self.session_done = asyncio.Event()
         # self.arr = ["mmi-guyd-ibh", "cqf-zeyo-hpe", "pbe-qqpx-rxy"]
-        self.arr = ["pst-eckw-ugc"]
+        self.arr = ["rew-mhpm-hov"]
 
     async def find_free_port(self, max_attempts=1000):
         tried_ports = set()
@@ -65,3 +65,16 @@ class Facade:
             log.info(f"🛑 Session for {meet_code} complete.")
         except Exception as e:
             log.error(f"❌ Error in session {meet_code}: {e}")
+
+    async def run_google_meet_recording_api(self,meet_code):
+        tasks = []
+
+        ws_port = await self.find_free_port()
+        log.info(f"🚀 Starting parallel session for meet: {meet_code} on port {ws_port}")
+        audio_server = AudioServer()
+        task = asyncio.create_task(self._start_recording_session(audio_server, meet_code, ws_port))
+        tasks.append(task)
+        await asyncio.gather(*tasks)
+        log.info("✅ All sessions completed.")
+
+        self.session_done.set()

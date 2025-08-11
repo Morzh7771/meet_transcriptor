@@ -34,8 +34,11 @@ class ChunkHandler:
         log.info(f" Saved audio chunk: {webm_path}")
 
         self.chunk_buffer.clear()
+        chunk_start_time = int(self.t0 * 1000) 
         self.t0 = time.time()
-        return webm_path, timestamp
+        log.info(f"The 'chunk_start_time' is: {chunk_start_time}")
+        log.info(f"The 'self.t0' time is: {int(self.t0 * 1000)}")
+        return webm_path, timestamp, chunk_start_time
 
     def has_data(self):
         return len(self.chunk_buffer) > 0

@@ -41,9 +41,10 @@ class AudioServer:
     async def _handle_audio_data(self, data, ws):
         self.chunk_handler.add_data(data)
         if self.chunk_handler.should_finalize():
-            webm_path, timestamp = self.chunk_handler.finalize()
+            webm_path, timestamp, chunk_start_time = self.chunk_handler.finalize()
             if webm_path:
-                asyncio.create_task(self.transcript_manager.transcribe_chunk(webm_path, timestamp, self.chunk_index))
+                log.info(f"The starting time of this chunk is: {chunk_start_time}")
+                asyncio.create_task(self.transcript_manager.transcribe_chunk(webm_path, timestamp, chunk_start_time))
                 self.chunk_index += 1
                 self.speaker_tracker.save_buffer(timestamp)
                 await ws.send("restart-stream")
@@ -87,9 +88,10 @@ class AudioServer:
 
     async def _finalize_session(self):
         if self.chunk_handler.has_data():
-            webm_path, timestamp = self.chunk_handler.finalize()
+            webm_path, timestamp, chunk_start_time = self.chunk_handler.finalize()
             if webm_path:
-                await self.transcript_manager.transcribe_chunk(webm_path, timestamp, self.chunk_index)
+                log.info(f"The starting time of this chunk is: {chunk_start_time}")
+                await self.transcript_manager.transcribe_chunk(webm_path, timestamp, chunk_start_time)
                 self.chunk_index += 1
                 self.speaker_tracker.save_buffer(timestamp)
 

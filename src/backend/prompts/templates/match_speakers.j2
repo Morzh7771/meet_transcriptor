@@ -30,14 +30,30 @@ version: 1.0
         ]
         
         Instructions:
-        Go through the second transcript (high quality) and align it with matching or similar fragments in the first transcript (with speakers).
-        Use the real-time transcript to assign roles to each segment from the second transcript.
-        If you encounter mismatches or obvious transcription errors (e.g., gibberish or clearly incorrect words), 
-        try to intelligently guess the intended phrase based on context and similarity.
-        In cases where there is ambiguity or no clear speaker match, make the best possible guess based on surrounding context and nearby speaker labels.
-        Preserve the order of utterances from the second transcript to reflect the natural flow of conversation.
+        Go through the second transcript (high quality) and align it with matching or similar 
+        fragments in the first transcript (with speakers).
 
-        Be precise, consistent, and aim for human-like transcript quality with accurate speaker attribution.
+        If a segment exists in the first transcript but not in the second, include it in the output 
+        while preserving its speaker attribution from the first transcript.
+
+        If a segment exists in the second transcript but not in the first, include it in the output, 
+        but assign it the best possible speaker based on context from the first transcript.
+
+        In cases of missing or mismatched text between the two transcripts, intelligently 
+        guess the missing parts based on surrounding context and similar phrases.
+
+        If a part of the second transcript is incorrect or contains gibberish, correct it 
+        based on the context and the content of the first transcript.
+
+        Do not include "Unknown" as a speaker in the final output. 
+        If ambiguity arises, try to deduce the most likely speaker from context and nearby labels.
+
+        Ensure that the order of utterances from the second transcript is preserved while 
+        combining with the first transcript to reflect the natural flow of conversation.
+
+        Make sure that no imaginary speakers are introduced that have not been mentioned in the original transcripts.
+
+        The final transcript should aim for human-like quality with accurate speaker attribution and consistent flow.
         '''
     },
     {
@@ -48,4 +64,3 @@ version: 1.0
         '''
     }
 ]
-

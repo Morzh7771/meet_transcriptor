@@ -129,9 +129,10 @@ class TranscriptManager:
         return best_speaker
 
 
-    async def transcribe_chunk(self, webm_path, timestamp, chunk_index):
+    async def transcribe_chunk(self, webm_path, timestamp, chunk_start_time):
         log.info(f" Transcribing: {webm_path}")
         # log.info(f"Current time in transcribe_chunk is: {time.time()}")
+        # offset = chunk_start_time - 0
         try:
             result = await self.transcriber.transcribe(webm_path, return_segments=True) # language="uk"
             text_lines = []
@@ -153,8 +154,9 @@ class TranscriptManager:
 
             for seg in result["segments"]:
                 log.info(f"The segment is: {seg}")
-                seg_abs_start = 10000 * chunk_index + seg["start"] * 1000
-                seg_abs_end = 10000 * chunk_index + seg["end"] * 1000
+                seg_abs_start = chunk_start_time + seg["start"] * 1000
+                seg_abs_end = chunk_start_time + seg["end"] * 1000
+                log.info(f"The start ({seg_abs_start}) and end ({seg_abs_end}) of the segment in transcription_return + chunk_start_time is")
                 speaker = self.find_active_speaker(seg_abs_start, seg_abs_end, speaker_ranges)
                 if speaker:
                     text_lines.append(f"{speaker}: {seg['text'].strip()}")
