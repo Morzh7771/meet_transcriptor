@@ -129,12 +129,12 @@ class TranscriptManager:
         return best_speaker
 
 
-    async def transcribe_chunk(self, webm_path, timestamp, chunk_start_time):
+    async def transcribe_chunk(self, webm_path, timestamp, chunk_start_time, language):
         log.info(f" Transcribing: {webm_path}")
         # log.info(f"Current time in transcribe_chunk is: {time.time()}")
         # offset = chunk_start_time - 0
         try:
-            result = await self.transcriber.transcribe(webm_path, return_segments=True) # language="uk"
+            result = await self.transcriber.transcribe(webm_path, return_segments=True, language=language) # language="uk"
             text_lines = []
 
             speaker_meta_path = os.path.join(self.paths["transcripts"],
@@ -170,7 +170,7 @@ class TranscriptManager:
         except Exception as e:
             log.error(f"❌ Transcription error: {e}")
 
-    async def transcribe_and_save_full_recording(self, webm_path):
+    async def transcribe_and_save_full_recording(self, webm_path, language):
         if not webm_path or not os.path.exists(webm_path):
             log.error("❌ Nothing to transcribe: audio path is empty or file doesn't exist")
             return
@@ -199,7 +199,7 @@ class TranscriptManager:
 
                 try:
                     log.info(f"🧠 Transcribing chunk {i+1}/{num_chunks}")
-                    result = await self.transcriber.transcribe(chunk_path) # language="uk"
+                    result = await self.transcriber.transcribe(chunk_path, language=language) # language="uk"
                     if result:
                         all_text.append(result.strip())
                     else:
@@ -211,7 +211,7 @@ class TranscriptManager:
 
             full_transcript_raw = "\n".join(all_text)
 
-            # 4. Save the full transcript
+            # Save the full transcript
             file_path = os.path.join(self.paths["full"], "full_transcript_from_full_audio.txt")
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(full_transcript_raw)
@@ -232,13 +232,6 @@ class TranscriptManager:
         except Exception as e:
             log.error(f"❌ Failed to process full recording: {e}")
 
-        # file_path = os.path.join(self.paths["full"], "full_transcript_afterwards.txt")
-        # with open(file_path, "w", encoding="utf-8") as f:
-        #     f.write(result)
-
-        # log.info(f"📝 Full transcript afterwards saved to: {file_path}")
-
-        # real_time_path = os.path.join(self.paths["full"], "full_transcript.txt")
 
     def save_full_transcript(self):
         if not self.full_transcript_buffer:

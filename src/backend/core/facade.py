@@ -19,7 +19,8 @@ class Facade:
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)
         self.session_done = asyncio.Event()
         # self.arr = ["mmi-guyd-ibh", "cqf-zeyo-hpe", "pbe-qqpx-rxy"]
-        self.arr = ["rew-mhpm-hov"]
+        self.arr = ["pav-vivk-xag"]
+        self.meeting_language = "ru"
 
     async def find_free_port(self, max_attempts=1000):
         tried_ports = set()
@@ -44,7 +45,7 @@ class Facade:
             ws_port = await self.find_free_port()
             log.info(f"🚀 Starting parallel session for meet: {meet_code} on port {ws_port}")
 
-            audio_server = AudioServer()
+            audio_server = AudioServer(self.meeting_language)
 
             task = asyncio.create_task(self._start_recording_session(audio_server, meet_code, ws_port))
             tasks.append(task)
@@ -71,7 +72,7 @@ class Facade:
 
         ws_port = await self.find_free_port()
         log.info(f"🚀 Starting parallel session for meet: {meet_code} on port {ws_port}")
-        audio_server = AudioServer()
+        audio_server = AudioServer(self.meeting_language)
         task = asyncio.create_task(self._start_recording_session(audio_server, meet_code, ws_port))
         tasks.append(task)
         await asyncio.gather(*tasks)

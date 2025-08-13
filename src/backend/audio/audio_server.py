@@ -11,13 +11,13 @@ from src.backend.utils.logger import CustomLog
 log = CustomLog()
 
 class AudioServer:
-    def __init__(self):
+    def __init__(self, meeting_language=None):
         self.chunk_handler = ChunkHandler()
         self.transcript_manager = TranscriptManager()
         self.speaker_tracker = SpeakerTracker()
         self.connection_closed = asyncio.Event()
         self.websocket = None  # Храним единственное подключение от Puppeteer
-        self.chunk_index = -1 # for some reason???
+        self.meeting_language = meeting_language
 
     async def handler_whisper(self, ws):
         log.info(" Whisper WebSocket connected")
@@ -44,8 +44,7 @@ class AudioServer:
             webm_path, timestamp, chunk_start_time = self.chunk_handler.finalize()
             if webm_path:
                 log.info(f"The starting time of this chunk is: {chunk_start_time}")
-                asyncio.create_task(self.transcript_manager.transcribe_chunk(webm_path, timestamp, chunk_start_time))
-                self.chunk_index += 1
+                asyncio.create_task(self.transcript_manager.transcribe_chunk(webm_path, timestamp, chunk_start_time, self.meeting_language))
                 self.speaker_tracker.save_buffer(timestamp)
                 await ws.send("restart-stream")
                 await asyncio.sleep(0.1)
@@ -91,8 +90,7 @@ class AudioServer:
             webm_path, timestamp, chunk_start_time = self.chunk_handler.finalize()
             if webm_path:
                 log.info(f"The starting time of this chunk is: {chunk_start_time}")
-                await self.transcript_manager.transcribe_chunk(webm_path, timestamp, chunk_start_time)
-                self.chunk_index += 1
+                await self.transcript_manager.transcribe_chunk(webm_path, timestamp, chunk_start_time, self.meeting_language)
                 self.speaker_tracker.save_buffer(timestamp)
 
         full_audio_path = self.transcript_manager.save_full()
@@ -104,7 +102,7 @@ class AudioServer:
             log.error(f"❌ Skipping Whisper full transcription — file not found or too small: {full_audio_path}")
             return
         log.info("Starting transcription and saving it of full audio")
-        await self.transcript_manager.transcribe_and_save_full_recording(full_audio_path)
+        await self.transcript_manager.transcribe_and_save_full_recording(full_audio_path, self.meeting_language)
 
     async def terminate(self):
         log.info("🚨 Terminating session manually")
