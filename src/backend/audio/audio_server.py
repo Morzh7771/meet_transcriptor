@@ -6,6 +6,7 @@ import websockets
 from src.backend.audio.chunk_handler import ChunkHandler
 from src.backend.audio.transcript_manager import TranscriptManager
 from src.backend.audio.speaker_tracker import SpeakerTracker
+from src.backend.modules.chatBot import ChatBot
 from src.backend.utils.logger import CustomLog
 
 log = CustomLog()
@@ -18,6 +19,7 @@ class AudioServer:
         self.connection_closed = asyncio.Event()
         self.websocket = None  # Храним единственное подключение от Puppeteer
         self.meeting_language = meeting_language
+        self.chat_bot = ChatBot()
 
     async def handler_whisper(self, ws):
         log.info(" Whisper WebSocket connected")
@@ -54,6 +56,10 @@ class AudioServer:
             data = json.loads(message)
             if "speakers" in data and "time" in data:
                 self.speaker_tracker.add_event(data)
+            if "chat" in data:
+                log.info(f"The chat is here: {data["chat"]}")
+                await self.chat_bot.send_bot_message("Hello from bot")
+
         except json.JSONDecodeError:
             log.warning(f"⚠️ Invalid JSON message: {message}")
 

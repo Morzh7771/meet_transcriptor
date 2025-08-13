@@ -322,7 +322,36 @@ async function main(email, password, meetCode, port, sessionState, page) {
         });
       } catch {}
     }
+
+    if (command.startsWith("send-chat-message:")) {
+    const message = command.split(":")[1];
+    
+    if (message) {
+      await sendMessageToChat(page, message);
+      console.log(`Sent message to chat: ${message}`);
+    }
+  }
   });
+}
+
+async function sendMessageToChat(page, message) {
+  const inputField = await page.$('div[aria-label="Send a message"]');
+
+  if (inputField) {
+    console.log("Поле для введення повідомлення знайдено!");
+  } else {
+    console.log("Поле для введення повідомлення не знайдено.");
+    const html = await page.content();
+    console.log(html);
+  }
+
+  if (inputField) {
+    await inputField.type(message);
+    await inputField.press('Enter');
+    console.log("Message sent: " + message);
+  } else {
+    console.error("Message input field not found");
+  }
 }
 
 async function cleanupMeetSession(sessionState) {
