@@ -174,14 +174,14 @@ async function trackAndSendSpeakerVectors(page, ws, sessionState, time_start) {
         return { time: Date.now(), speakers, chat };
       }, time_start);
 
-      console.log(
-        '🕒',
-        data.time,
-        'ms | 🎙',
-        JSON.stringify(data.speakers),
-        '| 💬 messages:',
-        data.chat
-      );
+      // console.log(
+      //   '🕒',
+      //   data.time,
+      //   'ms | 🎙',
+      //   JSON.stringify(data.speakers),
+      //   '| 💬 messages:',
+      //   data.chat
+      // );
 
       // Expand the participants fly-out if no speaker cards are detected.
       if (Object.keys(data.speakers).length === 0) {
@@ -225,6 +225,28 @@ async function launchBrowser() {
 
 async function joinMeetAndRecord(email, password, sessionState, page, meetCode, port) {
   await main(email, password, meetCode, port, sessionState, page);
+}
+
+async function sendMessageToChat(page, message) {
+  console.log("Inside sendMessageToChat sending: ", message);
+
+  const chatContainer = await page.$('div.Ge9Kpc.z38b6');
+  if (!chatContainer) {
+    console.log("Chat container not found. Opening chat...");
+    await open_dropdown(page);
+    await sleep(1500);
+  }
+
+ const inputField = await page.$('textarea[jsname="YPqjbf"]');
+
+  if (inputField) {
+    await inputField.type(message);
+    await inputField.press('Enter');
+    console.log("Message sent: " + message);
+
+  } else {
+    console.error("Message input field not found.");
+  }
 }
 
 async function main(email, password, meetCode, port, sessionState, page) {
@@ -299,59 +321,48 @@ async function main(email, password, meetCode, port, sessionState, page) {
     sessionState.speakerTrackerTask = trackAndSendSpeakerVectors(page, ws, sessionState, time_start);
   });
 
+
   ws.on("message", async (msg) => {
+    console.log("Raw message received:", msg); 
     const command = msg.toString().trim();
-    if (command === "restart-stream") {
-      if (sessionState.currentStream) {
-        try { sessionState.currentStream.destroy(); } catch {}
-      }
+    console.log("String of the message is: ", command)
+    try {
+        if (typeof command === 'string' && command.startsWith('{')) {
+            const data = JSON.parse(command);
+            
+            if (data.type === "chat_response") {
+              console.log("Sending in js")
+                await sendMessageToChat(page, data.message);
+                return;
+            }
+        }
 
-      if (!page || page.isClosed()) return;
+        
+        if (command === "restart-stream") {
+            if (sessionState.currentStream) {
+                try { sessionState.currentStream.destroy(); } catch {}
+            }
 
-      try {
-        const stream = await getStream(page, {
-          audio: true,
-          video: false,
-          mimeType: "audio/webm; codecs=opus",
-          audioBitsPerSecond: 128000
-        });
+            if (!page || page.isClosed()) return;
 
-        sessionState.currentStream = stream;
-        stream.on("data", chunk => {
-          if (ws.readyState === WebSocket.OPEN) ws.send(chunk);
-        });
-      } catch {}
+            try {
+                const stream = await getStream(page, {
+                    audio: true,
+                    video: false,
+                    mimeType: "audio/webm; codecs=opus",
+                    audioBitsPerSecond: 128000
+                });
+
+                sessionState.currentStream = stream;
+                stream.on("data", chunk => {
+                    if (ws.readyState === WebSocket.OPEN) ws.send(chunk);
+                });
+            } catch {}
+        }
+    } catch (e) {
+        console.error("Error handling message:", e);
     }
-
-    if (command.startsWith("send-chat-message:")) {
-    const message = command.split(":")[1];
-    
-    if (message) {
-      await sendMessageToChat(page, message);
-      console.log(`Sent message to chat: ${message}`);
-    }
-  }
-  });
-}
-
-async function sendMessageToChat(page, message) {
-  const inputField = await page.$('div[aria-label="Send a message"]');
-
-  if (inputField) {
-    console.log("Поле для введення повідомлення знайдено!");
-  } else {
-    console.log("Поле для введення повідомлення не знайдено.");
-    const html = await page.content();
-    console.log(html);
-  }
-
-  if (inputField) {
-    await inputField.type(message);
-    await inputField.press('Enter');
-    console.log("Message sent: " + message);
-  } else {
-    console.error("Message input field not found");
-  }
+});
 }
 
 async function cleanupMeetSession(sessionState) {

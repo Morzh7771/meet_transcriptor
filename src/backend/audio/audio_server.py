@@ -20,13 +20,12 @@ class AudioServer:
         self.websocket = None  # Храним единственное подключение от Puppeteer
         self.meeting_language = meeting_language
         self.chat_bot = ChatBot()
+        self.processed_messages = set()
 
     async def handler_whisper(self, ws):
         log.info(" Whisper WebSocket connected")
         self.websocket = ws
-        log.info("after definition of self.websocket")
         try:
-            log.info("inside try-except")
             async for message in ws:
                 #log.info("inside for message in ws")
                 if isinstance(message, bytes):
@@ -56,12 +55,25 @@ class AudioServer:
             data = json.loads(message)
             if "speakers" in data and "time" in data:
                 self.speaker_tracker.add_event(data)
+            
             if "chat" in data:
-                log.info(f"The chat is here: {data["chat"]}")
-                await self.chat_bot.send_bot_message("Hello from bot")
+                unseen_data = [msg for msg in data["chat"] if f"{msg['name']}_{msg['time']}_{msg['massage']}" not in self.processed_messages]
+                for msg in unseen_data:
+                    msg_id = f"{msg['name']}_{msg['time']}_{msg['massage']}"
 
-        except json.JSONDecodeError:
-            log.warning(f"⚠️ Invalid JSON message: {message}")
+                    self.processed_messages.add(msg_id)
+
+                    if msg.get("massage") and msg.get("name") != "Вы":
+                        log.info(f"In audio_facade: processing message: {msg}")
+                        response = await self.chat_bot.process_message(msg["massage"])
+                        if response and self.websocket:
+                            log.info(f"Sending response")
+                            await self.websocket.send(json.dumps({
+                                "type": "chat_response",
+                                "message": response
+                            }))
+        except Exception as e:
+            log.error(f"Error handling message: {e}")
 
     async def start(self, meet_code, ws_port):
         session_id = f"{meet_code}_{time.strftime('%Y-%m-%d_%H-%M-%S')}"
@@ -80,6 +92,7 @@ class AudioServer:
         self.transcript_manager.reset_transcript_buffer()
 
         log.info(f" Starting Whisper WebSocket server on port {ws_port}")
+        self.chat_bot.uri = f"ws://localhost:{ws_port}"
         server = await websockets.serve(self.handler_whisper, "localhost", ws_port)
 
         try:

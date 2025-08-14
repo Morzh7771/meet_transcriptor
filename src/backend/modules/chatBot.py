@@ -13,11 +13,19 @@ log = CustomLog()
 class ChatBot:
     def __init__(self):
         self.messages = []
-        self.uri = "ws://localhost:3000"
+        # self.uri = "ws://localhost:3000"
     
-    async def send_bot_message(self, message):
-        async with websockets.connect(self.uri) as websocket:
-            command = f"send-bot-message:{message}"
-            
-            await websocket.send(command)
-            print(f"Message sent to JS: {command}")
+    async def process_message(self, message):
+        log.info(f"Proccesing the message {message}")
+        response = f"The response to the message {message}"
+        return response
+    
+    # async def send_bot_message(self, message):
+    #     log.info(f"Sending bot message: {message}")
+    #     try:
+    #         async with websockets.connect(self.uri) as websocket:
+    #             command = f"send-chat-message:{message}"
+    #             await websocket.send(command)
+    #             log.info(f"Message sent to JS: {command}")
+    #     except Exception as e:
+    #         log.error(f"Failed to send bot message: {e}")
