@@ -19,8 +19,8 @@ class Facade:
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)
         self.session_done = asyncio.Event()
         # self.arr = ["mmi-guyd-ibh", "cqf-zeyo-hpe", "pbe-qqpx-rxy"]
-        self.arr = ["fpi-jzwz-kkv"]
-        self.meeting_language = "en"
+        self.arr = ["ucf-qtqg-oqc"]
+        self.meeting_language = "ru"
 
     async def find_free_port(self, max_attempts=1000):
         tried_ports = set()
