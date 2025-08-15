@@ -30,3 +30,133 @@ class CompanyResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True
     )
+
+class UserCreate(BaseModel):
+    email: str = Field(..., min_length=1, max_length=100, description="User email address")
+    company_id: str = Field(..., min_length=1, max_length=36, description="User email address")
+    username: str
+    password: str
+    role: str
+    gender: str
+    language: str
+
+class UserUpdate(BaseModel):
+    email: Optional[str]
+    username: Optional[str]
+    password: Optional[str]
+    role: Optional[str]
+    gender: Optional[str]
+    language: Optional[str]
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    company_id: str
+    username: str
+    role: str
+    gender: str
+    language: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class MeetCreate(BaseModel):
+    user_id: str
+    title: str
+    summary: str
+    date: datetime
+    duration: int
+    overview: str
+    notes: str
+    action_items: str
+    transcript: str
+    language: str
+    tags: str
+
+class MeetUpdate(BaseModel):
+    user_id: Optional[str] = None
+    title: Optional[str] = None
+    summary: Optional[str] = None
+    date: Optional[datetime] = None
+    duration: Optional[int] = None
+    overview: Optional[str] = None
+    notes: Optional[str] = None
+    action_items: Optional[str] = None
+    transcript: Optional[str] = None
+    language: Optional[str] = None
+    tags: Optional[str] = None
+
+class MeetResponse(BaseModel):
+    id: str
+    user_id: str
+    title: str
+    summary: str
+    date: datetime
+    duration: int
+    overview: str
+    notes: str
+    action_items: str
+    transcript: str
+    language: str
+    tags: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class MeetingMessageCreate(BaseModel):
+    meet_id: str
+    time: datetime
+    email: str
+    content: str
+
+class MeetingMessageUpdate(BaseModel):
+    meet_id: Optional[str] = None
+    time: Optional[datetime] = None
+    email: Optional[str] = None
+    content: Optional[str] = None
+
+class MeetingMessageResponse(BaseModel):
+    id: str
+    meet_id: str
+    time: datetime
+    email: str
+    content: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class MeetingChatMessageCreate(BaseModel):
+    meet_id: str
+    time: datetime
+    role: str
+    content: str
+
+class MeetingChatMessageUpdate(BaseModel):
+    meet_id: Optional[str] = None
+    time: Optional[datetime] = None
+    role: Optional[str] = None
+    content: Optional[str] = None
+
+class MeetingChatMessageResponse(BaseModel):
+    id: str
+    meet_id: str
+    time: datetime
+    role: str
+    content: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ParticipantCreate(BaseModel):
+    meet_id: str
+    time: datetime
+    email: str
+
+class ParticipantUpdate(BaseModel):
+    meet_id: Optional[str] = None
+    time: Optional[datetime] = None
+    email: Optional[str] = None
+
+class ParticipantResponse(BaseModel):
+    id: str
+    meet_id: str
+    time: datetime
+    email: str
+
+    model_config = ConfigDict(from_attributes=True)

@@ -22,7 +22,7 @@ class OpenAIConfig(ConfigBase):
     )
 
 class DBConfig(ConfigBase):
-    model_config = SettingsConfigDict(env_prefix="DB_")
+    model_config = SettingsConfigDict(env_prefix="SQL_")
     USER: str
     PASSWORD: SecretStr
     NAME: str
