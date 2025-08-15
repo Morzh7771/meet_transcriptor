@@ -1,31 +1,28 @@
-import os
-import json
-import time
-import asyncio
-import websockets
-from src.backend.audio.chunk_handler import ChunkHandler
-from src.backend.audio.transcript_manager import TranscriptManager
-from src.backend.audio.speaker_tracker import SpeakerTracker
+from src.backend.llm.historyFacade import HistoryFacade
 from src.backend.utils.logger import CustomLog
+from src.backend.llm.routerFacade import RouterAgent
+from src.backend.prompts.promptFacade import PromptFacade
+import json
 
 log = CustomLog()
 
 class ChatBot:
     def __init__(self):
-        self.messages = []
-        # self.uri = "ws://localhost:3000"
+        self.history = HistoryFacade()
+        self.router = RouterAgent()
     
     async def process_message(self, message):
-        log.info(f"Proccesing the message {message}")
-        response = f"The response to the message {message}"
-        return response
-    
-    # async def send_bot_message(self, message):
-    #     log.info(f"Sending bot message: {message}")
-    #     try:
-    #         async with websockets.connect(self.uri) as websocket:
-    #             command = f"send-chat-message:{message}"
-    #             await websocket.send(command)
-    #             log.info(f"Message sent to JS: {command}")
-    #     except Exception as e:
-    #         log.error(f"Failed to send bot message: {e}")
+
+        prompt_template = PromptFacade.get_prompt("chat", user_query=message)
+        
+        prompt = json.loads(prompt_template)
+
+        if not self.history.get_history():
+            self.history.add_system_message(prompt[0]["content"]["text"])
+            
+        self.history.add_user_query(prompt[1]["content"]["text"])
+        
+        router_response = await self.router(self.history.get_history())
+        self.history.add_assistant_message(str(router_response))
+
+        return router_response.output

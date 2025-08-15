@@ -1,6 +1,3 @@
-from typing import List, Tuple
-from pydantic import BaseModel, Field
-
 from pydantic import BaseModel, Field
 from typing import List
 
@@ -13,3 +10,6 @@ class MatchSpeakersOtput(BaseModel):
         ...,
         description="List of speaker utterances in the meeting"
     )
+
+class RouterResponse(BaseModel):
+    output: str = Field(..., description="A simple answer to user's question")

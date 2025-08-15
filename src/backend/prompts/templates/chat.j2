@@ -1,0 +1,22 @@
+-------------
+name: chat
+description: prompt to guide through basic chat completion
+author: Sofiia Sampara
+version: 1.0
+-------------
+[
+    {
+        "role": "system",
+        "content": {
+            "type": "text",
+            "text": "You are a basic chat completion agent. Your task is to answer basic user questions."
+        }
+    },
+    {
+        "role": "user",
+        "content": {
+            "type": "text",
+            "text": "{{ user_query }}"
+        }
+    }
+]

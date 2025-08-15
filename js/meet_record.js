@@ -323,7 +323,6 @@ async function main(email, password, meetCode, port, sessionState, page) {
 
 
   ws.on("message", async (msg) => {
-    console.log("Raw message received:", msg); 
     const command = msg.toString().trim();
     console.log("String of the message is: ", command)
     try {
