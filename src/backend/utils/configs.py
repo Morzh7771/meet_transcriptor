@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from sqlite3 import Connection
 from typing import Any, Dict
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,7 +21,14 @@ class OpenAIConfig(ConfigBase):
         ..., description="The API key for the OpenAI service"
     )
 
-
+class DBConfig(ConfigBase):
+    model_config = SettingsConfigDict(env_prefix="DB_")
+    USER: str
+    PASSWORD: SecretStr
+    NAME: str
+    PORT: int
+    HOST: str
+    ECHO: bool = False
 
 
 
@@ -34,7 +42,7 @@ class OpenAIConfig(ConfigBase):
 
 class Config(BaseSettings):
     openai: OpenAIConfig = Field(default_factory=OpenAIConfig)
-
+    db: DBConfig = Field(default_factory=DBConfig)
 
     @classmethod
     def load_config(cls) -> "Config":
