@@ -4,6 +4,8 @@ import instructor
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
+from src.backend.utils.configs import Config
+from src.backend.utils.logger import CustomLog
 
 load_dotenv()
 
@@ -17,7 +19,9 @@ class BaseFacade:
         return cls._instance
 
     def __init__(self):
-        self.raw_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.configs = Config.load_config()
+        self.logger = CustomLog()
+        self.raw_client = AsyncOpenAI(api_key=self.configs.openai.API_KEY.get_secret_value())
         self.client = instructor.from_openai(self.raw_client)
 
     async def completion(self, model: str, messages: list[dict],

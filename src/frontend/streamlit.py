@@ -6,7 +6,7 @@ import streamlit as st
 import asyncio
 import concurrent.futures
 
-from src.backend.core.facade import Facade
+from src.backend.core.Facade import Facade
 from src.backend.utils.logger import CustomLog
 
 log = CustomLog()

@@ -1,9 +1,10 @@
 import asyncio
 from typing import Dict
 
-from fastapi import FastAPI, Body, HTTPException
+from fastapi import FastAPI, HTTPException, Body
+from src.backend.models.api_models import StartMeetingRequest
 
-from src.backend.core.facade import Facade
+from src.backend.core.Facade import Facade
 
 app = FastAPI(title="Meet-Recorder Controller")
 
@@ -15,12 +16,11 @@ _session_tasks: Dict[str, asyncio.Task] = {}
 
 
 @app.post("/start")
-async def start(meet_code: str = Body(..., embed=False)):
+async def start(request: StartMeetingRequest):
     """
     Launch recording for *meet_code*.
-    The raw request body must contain only the code.
     """
-    meet_code = meet_code.strip()
+    meet_code = request.meet_code.strip()
     if not meet_code:
         raise HTTPException(400, detail="Body must contain a non-empty meet code")
 
@@ -29,9 +29,10 @@ async def start(meet_code: str = Body(..., embed=False)):
 
     # fire-and-forget recorder; store task so we can await / cancel later
     _session_tasks[meet_code] = asyncio.create_task(
-        facade.run_google_meet_recording_api(meet_code)  # ⇦ adapt signature if needed
+        facade.run_google_meet_recording_api(meet_code, request.meeting_language)
     )
     return {"status": "started", "meet_code": meet_code}
+
 
 
 @app.post("/terminate")

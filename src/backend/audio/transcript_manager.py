@@ -131,10 +131,8 @@ class TranscriptManager:
 
     async def transcribe_chunk(self, webm_path, timestamp, chunk_start_time, language):
         log.info(f" Transcribing: {webm_path}")
-        # log.info(f"Current time in transcribe_chunk is: {time.time()}")
-        # offset = chunk_start_time - 0
         try:
-            result = await self.transcriber.transcribe(webm_path, return_segments=True, language=language) # language="uk"
+            result = await self.transcriber.transcribe(webm_path, return_segments=True, language=language)
             text_lines = []
 
             speaker_meta_path = os.path.join(self.paths["transcripts"],
@@ -149,14 +147,12 @@ class TranscriptManager:
                 try:
                     result = json.loads(result)
                 except json.JSONDecodeError:
-                    log.error("❌ Could not parse response from Whisper as JSON")
+                    log.error("Could not parse response from Whisper as JSON")
                     return
 
             for seg in result["segments"]:
-                log.info(f"The segment is: {seg}")
                 seg_abs_start = chunk_start_time + seg["start"] * 1000
                 seg_abs_end = chunk_start_time + seg["end"] * 1000
-                log.info(f"The start ({seg_abs_start}) and end ({seg_abs_end}) of the segment in transcription_return + chunk_start_time is")
                 speaker = self.find_active_speaker(seg_abs_start, seg_abs_end, speaker_ranges)
                 if speaker:
                     text_lines.append(f"{speaker}: {seg['text'].strip()}")
@@ -164,11 +160,10 @@ class TranscriptManager:
             full_text = "\n".join(text_lines)
 
             self.full_transcript_buffer.extend(text_lines)
+            # TODO: add slm for improving chunks quality
 
-            log.info("Added transctipt to previous ones.")
-            log.info(f" Transcript full_text: {full_text}")
         except Exception as e:
-            log.error(f"❌ Transcription error: {e}")
+            log.error(f"Transcription error: {e}")
 
     async def transcribe_and_save_full_recording(self, webm_path, language):
         if not webm_path or not os.path.exists(webm_path):
@@ -245,7 +240,7 @@ class TranscriptManager:
         log.info(f"📝 Full transcript saved to: {file_path}")
 
     def save_full(self):
-        # self._save_transcript()
+
         self.save_full_transcript()
         output_file = self._merge_audio()
         return output_file
