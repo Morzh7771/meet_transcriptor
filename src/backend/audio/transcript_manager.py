@@ -18,9 +18,6 @@ class TranscriptManager:
         self.transcriber = Transcriber()
         self.paths = None
         self.full_transcript_buffer = None
-        # Whisper може трпнскрибувати за раз аудіо довжиною до 5 хв (300 секунд)
-        # Беремо з запасом 290 секунд + по 2 секунди до і після для
-        # обходу проблеми з обрубаними словами
         self.MAX_CHUNK_DURATION_SEC = 290
         self.CHUNK_EXTENSION = ".webm"
 
@@ -98,20 +95,6 @@ class TranscriptManager:
         merged_speaker_ranges = self.merge_speaker_ranges(speaker_ranges)
         return merged_speaker_ranges
 
-
-    # def find_active_speaker(self, seg_start, seg_end, speaker_ranges):
-    #     TOLERANCE_MS = 150
-    #     log.info(f"The transcript_line_range is: {seg_start} - {seg_end}")
-    #     log.info("--------------------------------")
-    #     for r in speaker_ranges:
-    #         log.info(f"The range is: {r["start_ms"]} - {r["end_ms"]}")
-    #         if r["start_ms"] + TOLERANCE_MS >= seg_start \
-    #             and r["end_ms"] - TOLERANCE_MS <= seg_end:
-    #             log.info("--------------------------------")
-    #             return r["speaker"]
-    #     log.info("--------------------------------")
-    #     return "Unknown"
-
     def find_active_speaker(self, seg_start, seg_end, speaker_ranges):
         TOLERANCE_MS = 150
         best_speaker = "Unknown"
@@ -158,6 +141,7 @@ class TranscriptManager:
                     text_lines.append(f"{speaker}: {seg['text'].strip()}")
 
             full_text = "\n".join(text_lines)
+            log.info(f"The transcript is: {full_text}")
 
             self.full_transcript_buffer.extend(text_lines)
             # TODO: add slm for improving chunks quality

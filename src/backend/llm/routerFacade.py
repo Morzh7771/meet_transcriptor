@@ -1,6 +1,6 @@
 import instructor
 from openai import AsyncOpenAI
-from src.backend.llm.models import RouterResponse
+from src.backend.models.llm_models import RouterResponse
 import os
 from dotenv import load_dotenv
 

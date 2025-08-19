@@ -164,6 +164,7 @@ async function trackAndSendSpeakerVectors(page, ws, sessionState, time_start) {
               chat.push({
                 name: senderName,
                 time: timestamp,
+                raw_time: Date.now(),
                 massage: text, // field name requested by user
               });
             });

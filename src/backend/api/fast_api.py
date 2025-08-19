@@ -21,6 +21,7 @@ async def start(request: StartMeetingRequest):
     Launch recording for *meet_code*.
     """
     meet_code = request.meet_code.strip()
+    
     if not meet_code:
         raise HTTPException(400, detail="Body must contain a non-empty meet code")
 
@@ -29,7 +30,7 @@ async def start(request: StartMeetingRequest):
 
     # fire-and-forget recorder; store task so we can await / cancel later
     _session_tasks[meet_code] = asyncio.create_task(
-        facade.run_google_meet_recording_api(meet_code, request.meeting_language)
+        facade.run_google_meet_recording_api(request.user_id, meet_code, request.meeting_language)
     )
     return {"status": "started", "meet_code": meet_code}
 

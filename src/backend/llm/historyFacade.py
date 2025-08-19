@@ -1,3 +1,6 @@
+from src.backend.db.dbFacade import DBFacade
+from src.backend.models.db_models import *
+
 class HistoryFacade:
 
     _instance = None
@@ -9,33 +12,28 @@ class HistoryFacade:
 
     def __init__(self):
         self.chat_history = []
+        self.db = DBFacade()
 
-    def add_user_query(self, query: str):
-        self.chat_history.append({
-            "role": "user",
-            "content": [{
-                "type": "text",
-                "text": query
-            }]
-        })
+    async def add_user_message(self, meet_id: str, time: int, role: str, message: str):
+        await self.db.create_meeting_chat_message(MeetingChatMessageCreate(
+            meet_id=meet_id,
+            time=time,
+            role="user",
+            content=message))
 
-    def add_assistant_message(self, message: str):
-        self.chat_history.append({
-            "role": "assistant",
-            "content": [{
-                "type": "text",
-                "text": message
-            }]
-        })
+    async def add_assistant_message(self, meet_id: str, time: int, role: str, message: str):
+        await self.db.create_meeting_chat_message(MeetingChatMessageCreate(
+            meet_id=meet_id,
+            time=time,
+            role="assistant",
+            content=message))
 
-    def add_system_message(self, message: str):
-        self.chat_history.append({
-            "role": "system",
-            "content": [{
-                "type": "text",
-                "text": message
-            }]
-        })
+    async def add_system_message(self, meet_id: str, time: int, role: str, message: str):
+        await self.db.create_meeting_chat_message(MeetingChatMessageCreate(
+            meet_id=meet_id,
+            time=time,
+            role="system",
+            content=message))
 
-    def get_history(self):
-        return self.chat_history
+    async def get_history(self, meet_id: str):
+        return [{"role": msg.role, "content": msg.content} for msg in await self.db.get_chat_messages_by_meet_id(meet_id)]

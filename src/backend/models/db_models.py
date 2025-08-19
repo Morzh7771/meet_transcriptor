@@ -62,15 +62,15 @@ class UserResponse(BaseModel):
 class MeetCreate(BaseModel):
     user_id: str
     title: str
-    summary: str
+    summary: Optional[str] = "No summary provided"
     date: datetime
-    duration: int
-    overview: str
-    notes: str
-    action_items: str
-    transcript: str
+    duration: Optional[int] = 0
+    overview: Optional[str] = "No overview provided"
+    notes: Optional[str] = "No notes provided"
+    action_items: Optional[str] = "No action items provided"
+    transcript: Optional[str] = "No transcript provided"
     language: str
-    tags: str
+    tags: Optional[str] = "No tags provided"
 
 class MeetUpdate(BaseModel):
     user_id: Optional[str] = None

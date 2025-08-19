@@ -70,15 +70,15 @@ class Meet(Base):
 
     user_id: Mapped[str] = mapped_column(ForeignKey("user.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(50), nullable=False)
-    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=True)
     date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    duration: Mapped[int] = mapped_column(Integer, nullable=False)
-    overview: Mapped[str] = mapped_column(Text, nullable=False)
-    notes: Mapped[str] = mapped_column(Text, nullable=False)
-    action_items: Mapped[str] = mapped_column(Text, nullable=False)
-    transcript: Mapped[str] = mapped_column(Text, nullable=False)
+    duration: Mapped[int] = mapped_column(Integer, nullable=True)
+    overview: Mapped[str] = mapped_column(Text, nullable=True)
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
+    action_items: Mapped[str] = mapped_column(Text, nullable=True)
+    transcript: Mapped[str] = mapped_column(Text, nullable=True)
     language: Mapped[str] = mapped_column(String(50), nullable=False)
-    tags: Mapped[str] = mapped_column(String(200), nullable=False)
+    tags: Mapped[str] = mapped_column(String(200), nullable=True)
 
     def __repr__(self):
         return f"Meet(id={self.id}, user_id={self.user_id}, title={self.title}, date={self.date})"

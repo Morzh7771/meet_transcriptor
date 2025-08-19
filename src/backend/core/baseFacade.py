@@ -1,13 +1,9 @@
 from openai import AsyncOpenAI
-# from src.utils.config import Config
 import instructor
 from pydantic import BaseModel
 import os
-from dotenv import load_dotenv
 from src.backend.utils.configs import Config
 from src.backend.utils.logger import CustomLog
-
-load_dotenv()
 
 class BaseFacade:
 

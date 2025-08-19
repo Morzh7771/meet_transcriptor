@@ -1,9 +1,9 @@
 import aiofiles
 import tiktoken
 from src.backend.utils.logger import CustomLog
-from src.backend.llm.baseFacade import BaseFacade
+from src.backend.core.baseFacade import BaseFacade
 from src.backend.prompts.promptFacade import PromptFacade
-from src.backend.llm.models import MatchSpeakersOtput
+from src.backend.models.llm_models import MatchSpeakersOtput
 
 log = CustomLog()
 

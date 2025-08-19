@@ -1,9 +1,9 @@
 import asyncio
-from src.backend.core.facade import Facade
+from src.backend.core.Facade import Facade
 
 facade = Facade()
 
-async def command_listener(facade_):
+async def command_listener(facade_: Facade):
     while not facade_.session_done.is_set():
         try:
             command = await asyncio.to_thread(input, ">>> ")
@@ -23,7 +23,7 @@ async def command_listener(facade_):
 
 async def main():
     await asyncio.gather(
-        facade.run_google_meet_recording(),
+        facade.run_google_meet_recording_api("8686ab18-c63d-4f90-b139-e45535d2935e", "mfp-xvip-xwm", "en"), # Paste the user_id and meet code here
         command_listener(facade)
     )
 

@@ -136,7 +136,6 @@ class DBFacade(BaseFacade):
             if not company:
                 return None
             
-            # Update only provided fields (exclude unset fields)
             update_data = company_update.model_dump(exclude_unset=True)
             for field, value in update_data.items():
                 setattr(company, field, value)
@@ -254,7 +253,7 @@ class DBFacade(BaseFacade):
             session.add(meet)
             await session.commit()
             await session.refresh(meet)
-            return MeetResponse.model_validate(meet)
+            return meet.id
 
     async def get_meet_by_id(self, meet_id: str) -> Optional["MeetResponse"]:
         """READ - Get meet by ID"""
@@ -411,7 +410,7 @@ class DBFacade(BaseFacade):
     async def get_chat_messages_by_meet_id(self, meet_id: str) -> List["MeetingChatMessageResponse"]:
         """READ - Get all chat messages for a specific meet"""
         async with self.AsyncSessionLocal() as session:
-            stmt = select(MeetingChatMessage).where(MeetingChatMessage.meet_id == meet_id)
+            stmt = select(MeetingChatMessage).where(MeetingChatMessage.meet_id == meet_id).order_by(MeetingChatMessage.time)
             result = await session.execute(stmt)
             chat_messages = result.scalars().all()
             return [MeetingChatMessageResponse.model_validate(msg) for msg in chat_messages]

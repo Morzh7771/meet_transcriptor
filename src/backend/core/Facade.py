@@ -39,7 +39,7 @@ class Facade(BaseFacade):
         raise RuntimeError("Could not find free port")
 
 
-    async def run_google_meet_recording_api(self,  meet_code: str, meeting_language: str):
+    async def run_google_meet_recording_api(self, user_id: str, meet_code: str, meeting_language: str):
         """
         Start a Google Meet recording session with audio server and WebSocket connection.
         
@@ -56,7 +56,7 @@ class Facade(BaseFacade):
         
             audio_server = AudioServer()
             # Start recording session
-            ws_task = asyncio.create_task(audio_server.start(meet_code, meeting_language, ws_port))
+            ws_task = asyncio.create_task(audio_server.start(user_id, meet_code, meeting_language, ws_port))
             await asyncio.sleep(1)  # Give WebSocket time to initialize
             
             # Connect JS plugin
