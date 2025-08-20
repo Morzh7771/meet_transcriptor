@@ -175,14 +175,14 @@ async function trackAndSendSpeakerVectors(page, ws, sessionState, time_start) {
         return { time: Date.now(), speakers, chat };
       }, time_start);
 
-      // console.log(
-      //   '🕒',
-      //   data.time,
-      //   'ms | 🎙',
-      //   JSON.stringify(data.speakers),
-      //   '| 💬 messages:',
-      //   data.chat
-      // );
+      console.log(
+        '🕒',
+        data.time,
+        'ms | 🎙',
+        JSON.stringify(data.speakers),
+        '| 💬 messages:',
+        data.chat
+      );
 
       // Expand the participants fly-out if no speaker cards are detected.
       if (Object.keys(data.speakers).length === 0) {

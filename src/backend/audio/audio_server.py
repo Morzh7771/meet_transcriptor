@@ -95,8 +95,8 @@ class AudioServer:
             title="Test meet",
             date=datetime.now(),
             language=meeting_language))
+        
         log.info(f"The meeting is successfully created and meet_id is: {meet_id}")
-
 
         for path in paths.values():
             os.makedirs(path, exist_ok=True)
@@ -117,13 +117,13 @@ class AudioServer:
         try:
             await self.connection_closed.wait()
             log.info("✅ Whisper session finished")
-            await self._finalize_session(meeting_language)
+            await self._finalize_session(meeting_language, meet_id)
         finally:
             server.close()
             await server.wait_closed()
             log.info(" WebSocket server closed")
 
-    async def _finalize_session(self, meeting_language):
+    async def _finalize_session(self, meeting_language, meet_id):
         if self.chunk_handler.has_data():
             webm_path, timestamp, chunk_start_time = self.chunk_handler.finalize()
             if webm_path:
@@ -135,14 +135,14 @@ class AudioServer:
         if not full_audio_path:
             log.info("The full_audio_path is empty!!!")
         self.speaker_tracker.save_timeline()
-        log.info(f"Finished sacing timeline and the full_audio_path is: {full_audio_path}")
+        log.info(f"Finished saving timeline and the full_audio_path is: {full_audio_path}")
 
         # Whisper does the whole transcript (with the roles)
         if not os.path.exists(full_audio_path) or os.path.getsize(full_audio_path) < 1024:
             log.error(f"Skipping Whisper full transcription — file not found or too small: {full_audio_path}")
             return
         log.info("Starting transcription and saving it of full audio")
-        await self.transcript_manager.transcribe_and_save_full_recording(full_audio_path, meeting_language)
+        await self.transcript_manager.transcribe_and_save_full_recording(full_audio_path, meeting_language, meet_id)
 
     async def terminate(self):
         log.info("Terminating session manually")

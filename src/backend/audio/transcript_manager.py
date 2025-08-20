@@ -9,13 +9,15 @@ import math
 # from src.backend.llm.transcriber import Transcriber
 from src.backend.modules.transcriber import Transcriber
 from src.backend.utils.logger import CustomLog
-from pathlib import Path
+from src.backend.db.dbFacade import DBFacade
+from src.backend.models.db_models import MeetUpdate
 
 log = CustomLog()
 
 class TranscriptManager:
     def __init__(self):
         self.transcriber = Transcriber()
+        self.db = DBFacade()
         self.paths = None
         self.full_transcript_buffer = None
         self.MAX_CHUNK_DURATION_SEC = 290
@@ -138,7 +140,7 @@ class TranscriptManager:
         except Exception as e:
             log.error(f"Transcription error: {e}")
 
-    async def transcribe_and_save_full_recording(self, webm_path, language):
+    async def transcribe_and_save_full_recording(self, webm_path, language, meet_id):
         if not webm_path or not os.path.exists(webm_path):
             log.error("❌ Nothing to transcribe: audio path is empty or file doesn't exist")
             return
@@ -167,7 +169,7 @@ class TranscriptManager:
 
                 try:
                     log.info(f"🧠 Transcribing chunk {i+1}/{num_chunks}")
-                    result = await self.transcriber.transcribe(chunk_path, language=language) # language="uk"
+                    result = await self.transcriber.transcribe(chunk_path, language=language)
                     if result:
                         all_text.append(result.strip())
                     else:
@@ -187,13 +189,16 @@ class TranscriptManager:
             log.info(f"✅ Full transcript saved to: {file_path}")
 
             full_transcript = await self.transcriber.match_transcript_speakers("\n".join(self.full_transcript_buffer), full_transcript_raw)
-            log.info(f"The full transcript returned from llm call is: {full_transcript}")
+            full_transcript_text = "\n".join([f"{segment.speaker}: {segment.text}" for segment in full_transcript])
+            log.info(f"The full transcript returned from llm call is: {full_transcript_text}")
+
+            # TODO: add summary, notes, action, tags
+            await self.db.update_meet(meet_id, MeetUpdate(transcript=full_transcript_text))
             
             full_transcript_path = os.path.join(self.paths["full"], "full_final_transcript.txt")
-            text = "\n".join([f"{segment.speaker}: {segment.text}" for segment in full_transcript])
             
             with open(full_transcript_path, "w", encoding="utf-8") as f:
-                f.write(text)
+                f.write(full_transcript_text)
             
             self.reset_transcript_buffer()
 
