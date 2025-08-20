@@ -27,19 +27,8 @@ class TranscriptManager:
     def reset_transcript_buffer(self):
         self.full_transcript_buffer = []
 
-    # async def transcribe_chunk(self, webm_path, timestamp):
-    #     log.info(f" Transcribing: {webm_path}")
-    #     try:
-    #         text = (await self.transcriber.transcribe(webm_path)).strip()
-    #         log.info(f"▶  {text or '<empty>'}")
-
-    #         if text:
-    #             file_path = os.path.join(self.paths["transcripts"], f"chunk_{timestamp}.txt")
-    #             with open(file_path, "w", encoding="utf-8") as f:
-    #                 f.write(text)
-    #             log.info(f" Transcript saved: {file_path}")
-    #     except Exception as e:
-    #         log.error(f"❌ Transcription error: {e}")
+    def get_transcript(self):
+        return "\n".join(self.full_transcript_buffer)
 
     def merge_speaker_ranges(self, speaker_ranges):
 

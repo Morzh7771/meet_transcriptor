@@ -61,17 +61,16 @@ class AudioServer:
             if "chat" in data and data["chat"]:
                 unseen_data = [msg for msg in data["chat"] if f"{msg['name']}_{msg['time']}_{msg['massage']}" not in self.processed_messages]
                 for msg in unseen_data:
-                    log.info("Processing message: msg")
                     msg_id = f"{msg['name']}_{msg['time']}_{msg['massage']}"
 
                     self.processed_messages.add(msg_id)
 
                     if msg.get("massage") and msg.get("name") != "Вы":
-                        log.info(f"In audio_facade: processing message: {msg}")
-                        response = await self.chat_bot.process_message(meet_id, msg.get("raw_time", datetime.now()), msg.get("name"), msg["massage"])
-                        log.info(f"The response from process_message is: {response}")
+                        # log.info(f"In audio_facade: processing message: {msg}")
+                        response = await self.chat_bot.process_message(meet_id, msg.get("raw_time", datetime.now()), msg.get("name"), msg["massage"], self.transcript_manager.full_transcript_buffer)
+                        # log.info(f"The response from process_message is: {response}")
                         if response and self.websocket:
-                            log.info(f"Sending response")
+                            # log.info(f"Sending response")
                             await self.websocket.send(json.dumps({
                                 "type": "chat_response",
                                 "message": response

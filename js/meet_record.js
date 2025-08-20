@@ -216,6 +216,11 @@ async function launchBrowser() {
       "--no-default-browser-check",
       "--disable-features=TranslateUI",
       "--disable-extensions",
+      "--disable-background-timer-throttling",
+      "--disable-renderer-backgrounding",
+      "--disable-backgrounding-occluded-windows",
+      "--disable-features=AudioServiceOutOfProcess",
+      "--autoplay-policy=no-user-gesture-required",
     ],
     closeDelay: 2000,
   });

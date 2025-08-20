@@ -1,13 +1,10 @@
 import asyncio
-from src.backend.modules.transcriber import Transcriber
 from src.backend.modules.chatBot import ChatBot
-# import sys
-# import os
 
 
 async def main():
     chat_bot = ChatBot()
-    answer = await chat_bot.process_message("What is the capital of Ukraine?")
+    answer = await chat_bot.process_message("38a6f98d-21cb-4f1e-8060-ae2455a0e063", 1755365529, "user", "What Alice said about the new meeting", ["Bob: When will be our next meeting and what it will be about?", "Clare: I think, it will be on Monday at 1 pm", "Alice: No, I think it will be on Tuesday at 1 pm"])
     print(f"The answer is: {answer}")
 
 

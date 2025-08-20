@@ -9,14 +9,26 @@ version: 1.0
         "role": "system",
         "content": {
             "type": "text",
-            "text": "You are a basic chat completion agent. Your task is to answer basic user questions."
+            "text": """
+            You are a chat-bot in the google-meet chat. 
+            Your task is to answer user questions knowing the context of the meeting.
+            You receive the user's question and the transcript of a current meeting.
+            Answer the user question according to the content of the meeting transcript.
+            If the transcript does not contain enough information to answer, respond using your general knowledge.
+            """
         }
     },
     {
         "role": "user",
         "content": {
             "type": "text",
-            "text": "{{ user_query }}"
+            "text": """
+            User question: {{ user_query }}
+            Meeting transcript:
+            {% for line in meeting_transcript %}
+                {{ line }}
+            {% endfor %}
+            """
         }
     }
 ]
