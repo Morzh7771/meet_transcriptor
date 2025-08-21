@@ -11,6 +11,7 @@ from src.backend.modules.transcriber import Transcriber
 from src.backend.utils.logger import CustomLog
 from src.backend.db.dbFacade import DBFacade
 from src.backend.models.db_models import MeetUpdate
+from src.backend.modules.meetingAnalizer import MeetingAnalizer
 
 log = CustomLog()
 
@@ -22,6 +23,7 @@ class TranscriptManager:
         self.full_transcript_buffer = None
         self.MAX_CHUNK_DURATION_SEC = 290
         self.CHUNK_EXTENSION = ".webm"
+        self.meeting_analizer = MeetingAnalizer()
 
     def set_paths(self, paths):
         self.paths = paths
@@ -33,6 +35,9 @@ class TranscriptManager:
         return "\n".join(self.full_transcript_buffer)
 
     def merge_speaker_ranges(self, speaker_ranges):
+
+        if not speaker_ranges:
+            return []
 
         last_speaker = None
         previous_end = None
@@ -92,6 +97,8 @@ class TranscriptManager:
         best_overlap = 0
 
         for r in speaker_ranges:
+            if r["start_ms"] is None or r["end_ms"] is None:
+                continue
             r_start = r["start_ms"] - TOLERANCE_MS
             r_end = r["end_ms"] + TOLERANCE_MS
 
@@ -116,6 +123,10 @@ class TranscriptManager:
 
             speaker_ranges = self.get_speaker_ranges(speaker_events)
             log.info(f"Speaker ranges are: {speaker_ranges}")
+
+            if not speaker_ranges:
+                log.info("No active speakers in this chunk; skipping transcript append.")
+                return
 
             if isinstance(result, str):
                 try:
@@ -192,8 +203,24 @@ class TranscriptManager:
             full_transcript_text = "\n".join([f"{segment.speaker}: {segment.text}" for segment in full_transcript])
             log.info(f"The full transcript returned from llm call is: {full_transcript_text}")
 
-            # TODO: add summary, notes, action, tags
-            await self.db.update_meet(meet_id, MeetUpdate(transcript=full_transcript_text))
+            overview = await self.meeting_analizer.generate_overview(full_transcript_text)
+            overview = overview.overview
+            summary_and_tags = await self.meeting_analizer.summarize(full_transcript_text)
+            summary = summary_and_tags.summary
+            tags = summary_and_tags.tags
+            notes = await self.meeting_analizer.generate_notes(full_transcript_text)
+            notes = notes.notes
+            action_items = await self.meeting_analizer.generate_action_items(full_transcript_text)
+            action_items = action_items.action_items
+            log.info(f"The summary is: {summary}\nThe overview is: {overview}\nThe tags are: {tags}\nThe notes are: {notes}\nThe action_items are: {action_items}")
+
+            await self.db.update_meet(meet_id, MeetUpdate(
+                transcript=full_transcript_text, 
+                overview="\n".join(overview),
+                summary=summary,
+                tags=",".join(tags),
+                action_items=action_items,
+                notes=notes))
             
             full_transcript_path = os.path.join(self.paths["full"], "full_final_transcript.txt")
             

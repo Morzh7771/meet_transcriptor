@@ -31,7 +31,7 @@ class JsPluginApi:
             text = await response.text()
             log.info(f" Server response: {response.status} — {text}")
 
-    async def connect(self, meet_code: str, port: int):
+    async def connect(self, meet_code: str, port: int, chat_port: int):
         async with aiohttp.ClientSession() as session:
             log.info(" Sending /start command to JS service...")
             response = await session.post(
@@ -40,7 +40,8 @@ class JsPluginApi:
                     "email": self.email,
                     "password": self.password,
                     "meetCode": meet_code,
-                    "port": port
+                    "port": port,
+                    "chatPort": chat_port
                 }
             )
             text = await response.text()

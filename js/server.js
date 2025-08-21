@@ -46,7 +46,7 @@ app.post("/submit-2fa", (req, res) => {
 });
 
 app.post("/start", async (req, res) => {
-  const { email, password, meetCode, port } = req.body;
+  const { email, password, meetCode, port, chatPort } = req.body;
 
   if (!email || !password || !meetCode || !port) {
     return res.status(400).json({ error: "Missing required parameters." });
@@ -56,7 +56,7 @@ app.post("/start", async (req, res) => {
   console.log("SessionId is: ", sessionId);
 
   try {
-    const result = await sessionManager.startSession(email, password, sessionId, meetCode, port);
+    const result = await sessionManager.startSession(email, password, sessionId, meetCode, port, chatPort);
     res.status(200).json({ ...result, sessionId });
   } catch (err) {
     console.error("Failed to start session:", err);

@@ -3,6 +3,7 @@ import json
 import time
 import asyncio
 import websockets
+from contextlib import suppress
 from src.backend.audio.chunk_handler import ChunkHandler
 from src.backend.audio.transcript_manager import TranscriptManager
 from src.backend.audio.speaker_tracker import SpeakerTracker
@@ -28,6 +29,9 @@ class AudioServer:
     async def handler_whisper(self, ws, user_id, meet_id, meeting_language):
         log.info(" Whisper WebSocket connected")
         self.websocket = ws
+        
+        ping_task = asyncio.create_task(self.send_ping(ws))
+         
         try:
             async for message in ws:
                 if isinstance(message, bytes):
@@ -37,6 +41,9 @@ class AudioServer:
         except websockets.exceptions.ConnectionClosed:
             log.warning("Whisper WebSocket disconnected")
         finally:
+            ping_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await ping_task
             log.info("[FINALLY] Calling connection_closed.set()")
             self.connection_closed.set()
             log.info("Connection_closed.set() closed")
@@ -58,27 +65,66 @@ class AudioServer:
             if "speakers" in data and "time" in data:
                 self.speaker_tracker.add_event(data)
             
-            if "chat" in data and data["chat"]:
-                unseen_data = [msg for msg in data["chat"] if f"{msg['name']}_{msg['time']}_{msg['massage']}" not in self.processed_messages]
-                for msg in unseen_data:
-                    msg_id = f"{msg['name']}_{msg['time']}_{msg['massage']}"
+            # if "chat" in data and data["chat"]:
+            #     unseen_data = [msg for msg in data["chat"] if f"{msg['name']}_{msg['time']}_{msg['massage']}" not in self.processed_messages]
+            #     for msg in unseen_data:
+            #         msg_id = f"{msg['name']}_{msg['time']}_{msg['massage']}"
 
-                    self.processed_messages.add(msg_id)
+            #         self.processed_messages.add(msg_id)
 
-                    if msg.get("massage") and msg.get("name") != "Вы":
-                        # log.info(f"In audio_facade: processing message: {msg}")
-                        response = await self.chat_bot.process_message(meet_id, msg.get("raw_time", datetime.now()), msg.get("name"), msg["massage"], self.transcript_manager.full_transcript_buffer)
-                        # log.info(f"The response from process_message is: {response}")
-                        if response and self.websocket:
-                            # log.info(f"Sending response")
-                            await self.websocket.send(json.dumps({
-                                "type": "chat_response",
-                                "message": response
-                            }))
+            #         if msg.get("massage") and msg.get("name") != "Вы":
+            #             log.info(f"In audio_facade: processing message: {msg}")
+            #             response = await self.chat_bot.process_message(meet_id, msg.get("raw_time", datetime.now()), msg.get("name"), msg["massage"], self.transcript_manager.full_transcript_buffer)
+            #             # log.info(f"The response from process_message is: {response}")
+            #             if response and self.websocket:
+            #                 # log.info(f"Sending response")
+            #                 await self.websocket.send(json.dumps({
+            #                     "type": "chat_response",
+            #                     "message": response
+            #                 }))
         except Exception as e:
             log.error(f"Error handling message: {e}")
+    
+    async def handle_chat_ws(self, ws, meet_id):
+        log.info("Chat WS connected")
+        self.chat_ws = ws
 
-    async def start(self, user_id, meet_code, meeting_language, ws_port):
+        try:
+            async for message in ws:
+                if not isinstance(message, str):
+                    continue
+                try:
+                    data = json.loads(message)
+                except json.JSONDecodeError:
+                    continue
+
+                if "chat" in data and data["chat"]:
+                    unseen = [
+                        msg for msg in data["chat"]
+                        if f"{msg['name']}_{msg['time']}_{msg['massage']}" not in self.processed_messages
+                    ]
+                    for msg in unseen:
+                        msg_id = f"{msg['name']}_{msg['time']}_{msg['massage']}"
+                        self.processed_messages.add(msg_id)
+
+                        if msg.get("massage") and msg.get("name") != "Вы":
+                            response = await self.chat_bot.process_message(
+                                meet_id,
+                                msg.get("raw_time", datetime.now()),
+                                msg.get("name"),
+                                msg["massage"],
+                                self.transcript_manager.full_transcript_buffer,
+                            )
+                            if response:
+                                await self.chat_ws.send(json.dumps({
+                                    "type": "chat_response",
+                                    "message": response
+                                }))
+        except websockets.exceptions.ConnectionClosed:
+            log.warning("Chat WS disconnected")
+
+
+    async def start(self, user_id, meet_code, meeting_language, ws_port, chat_port):
         session_id = f"{meet_code}_{time.strftime('%Y-%m-%d_%H-%M-%S')}"
         # TODO: save it in ak blob
         paths = {
@@ -114,6 +160,11 @@ class AudioServer:
             ws_port
         )
 
+        chat_server = await websockets.serve(
+            lambda ws: self.handle_chat_ws(ws, meet_id),
+            "localhost", chat_port
+        )
+        
         try:
             await self.connection_closed.wait()
             log.info("✅ Whisper session finished")
@@ -161,6 +212,30 @@ class AudioServer:
                 log.warning(f"⚠️ Could not close websocket: {e}")
         else:
             log.warning("⚠️ No websocket to terminate")
+        
+        if getattr(self, "chat_ws", None):
+            try:
+                await self.chat_ws.send(json.dumps({"type": "terminate"}))
+                log.info("📨 Sent 'terminate' to chat websocket")
+            except Exception as e:
+                log.warning(f"⚠️ Could not send terminate to chat: {e}")
+
+            try:
+                await self.chat_ws.close()
+                log.info("✅ Chat websocket closed")
+            except Exception as e:
+                log.warning(f"⚠️ Could not close chat websocket: {e}")
+        else:
+            log.warning("⚠️ No chat websocket to terminate")
 
         self.connection_closed.set()
+        
+    async def send_ping(self, websocket):
+        while not self.connection_closed.is_set() and not websocket.close:
+            try:
+                await websocket.ping()
+                await asyncio.sleep(60)
+            except websockets.exceptions.ConnectionClosed:
+                print("Connection closed")
+                break
 

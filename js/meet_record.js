@@ -6,7 +6,26 @@ const { executablePath } = require("puppeteer");
 const WebSocket = require("ws");
 
 puppeteer.use(StealthPlugin());
-
+async function keepAudioAlive(page) {
+  await page.evaluate(() => {
+    try {
+      if (window.__silence_ctx) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AC();
+      const src = ctx.createBufferSource();
+      const buf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      src.buffer = buf;
+      src.loop = true;
+      src.connect(ctx.destination);
+      src.start();
+      window.__silence_ctx = ctx;
+      window.__silence_src = src;
+      console.log("🔊 Silent audio keepalive started");
+    } catch (e) {
+      console.error("keepAudioAlive error:", e);
+    }
+  });
+}
 const TARGET_CLASS_LIST = [
   "UywwFc-LgbsSe",
   "UywwFc-LgbsSe-OWXEXe-SfQLQb-suEOdc",
@@ -16,6 +35,37 @@ const TARGET_CLASS_LIST = [
   "IyLmn",
   "QJgqC"
 ];
+
+function startMinuteScreenshotAndKeypress(page, sessionState, label = "minute_tick", intervalMs = 60_000) {
+  if (!sessionState) sessionState = {};
+  if (sessionState.minuteInterval) clearInterval(sessionState.minuteInterval);
+
+  let running = false;
+
+  const minuteInterval = setInterval(async () => {
+    if (running) return;
+    if (sessionState.terminateRequested || !page || page.isClosed()) return;
+
+    running = true;
+    try {
+      // Ensure the Meet tab has focus before keypress.
+      await page.bringToFront();
+
+      // Press "b" (use code for layout safety).
+      await page.keyboard.press("Shift")
+
+      // Take a labeled screenshot (increments global step counter).
+      await logStep(page, label);
+    } catch (e) {
+      console.error("❌ minute task error:", e);
+    } finally {
+      running = false;
+    }
+  }, intervalMs);
+
+  sessionState.minuteInterval = minuteInterval;
+  return minuteInterval;
+}
 
 const sleep = ms => new Promise(res => setTimeout(res, ms));
 
@@ -117,7 +167,7 @@ async function tabUntilAllClassesMatch(page, maxSteps = 30) {
   return false;
 }
 
-async function trackAndSendSpeakerVectors(page, ws, sessionState, time_start) {
+async function trackAndSendSpeakerVectors(page, ws, chatWS, sessionState, time_start) {
   while (!sessionState.terminateRequested) {
     // Abort if the Meet page is closed.
     if (!page || page.isClosed()) {
@@ -191,7 +241,10 @@ async function trackAndSendSpeakerVectors(page, ws, sessionState, time_start) {
 
       // Stream the snapshot via WebSocket.
       if (ws && ws.readyState === ws.OPEN) {
-        ws.send(JSON.stringify(data));
+        ws.send(JSON.stringify({ time: data.time, speakers: data.speakers }));
+      }
+      if (data.chat.length && chatWS && chatWS.readyState === WebSocket.OPEN && chatWS.bufferedAmount < 1_000_000) {
+        chatWS.send(JSON.stringify({ chat: data.chat }));
       }
     } catch (err) {
       console.error('❌ trackAndSendSpeakerVectors error:', err);
@@ -221,6 +274,7 @@ async function launchBrowser() {
       "--disable-backgrounding-occluded-windows",
       "--disable-features=AudioServiceOutOfProcess",
       "--autoplay-policy=no-user-gesture-required",
+      "--disable-features=CalculateNativeWinOcclusion",
     ],
     closeDelay: 2000,
   });
@@ -229,8 +283,8 @@ async function launchBrowser() {
   return { browser, page };
 }
 
-async function joinMeetAndRecord(email, password, sessionState, page, meetCode, port) {
-  await main(email, password, meetCode, port, sessionState, page);
+async function joinMeetAndRecord(email, password, sessionState, page, meetCode, port, chatPort) {
+  await main(email, password, meetCode, port, sessionState, page, chatPort);
 }
 
 async function sendMessageToChat(page, message) {
@@ -255,7 +309,7 @@ async function sendMessageToChat(page, message) {
   }
 }
 
-async function main(email, password, meetCode, port, sessionState, page) {
+async function main(email, password, meetCode, port, sessionState, page, chatPort) {
   if (!fs.existsSync("js/screenshots")) fs.mkdirSync("js/screenshots");
 
   await page.goto("https://accounts.google.com/", { waitUntil: "networkidle2" });
@@ -306,9 +360,14 @@ async function main(email, password, meetCode, port, sessionState, page) {
   await logStep(page, "Participants panel");
   await sleep(1000);
 
+  await keepAudioAlive(page);
+
+  startMinuteScreenshotAndKeypress(page, sessionState);
   const time_start = Date.now();
   const ws = new WebSocket(`ws://localhost:${port}`);
+  const chatWS  = new WebSocket(`ws://localhost:${chatPort}`);
   sessionState.ws = ws;
+  sessionState.chatWS = chatWS;
 
   ws.on("open", async () => {
     const currentStream = await getStream(page, {
@@ -324,24 +383,39 @@ async function main(email, password, meetCode, port, sessionState, page) {
       if (ws.readyState === WebSocket.OPEN) ws.send(chunk);
     });
 
-    sessionState.speakerTrackerTask = trackAndSendSpeakerVectors(page, ws, sessionState, time_start);
+    sessionState.speakerTrackerTask = trackAndSendSpeakerVectors(page, ws, chatWS, sessionState, time_start);
   });
 
+  chatWS.on("message", async (msg) => {
+    const s = msg.toString().trim();
+    if (s === "terminate") {
+      await cleanupMeetSession(sessionState);
+      return;
+    }
+    if (!s.startsWith("{")) return;
+    const payload = JSON.parse(s);
+    if (payload.type === "chat_response") {
+      await sendMessageToChat(page, payload.message);
+    }
+  });
 
   ws.on("message", async (msg) => {
     const command = msg.toString().trim();
     console.log("String of the message is: ", command)
     try {
-        if (typeof command === 'string' && command.startsWith('{')) {
-            const data = JSON.parse(command);
+        // if (typeof command === 'string' && command.startsWith('{')) {
+        //     const data = JSON.parse(command);
             
-            if (data.type === "chat_response") {
-              console.log("Sending in js")
-                await sendMessageToChat(page, data.message);
-                return;
-            }
+        //     if (data.type === "chat_response") {
+        //       console.log("Sending in js")
+        //         await sendMessageToChat(page, data.message);
+        //         return;
+        //     }
+        // }
+        if (command === "terminate") {
+          await cleanupMeetSession(sessionState);
+          return;
         }
-
         
         if (command === "restart-stream") {
             if (sessionState.currentStream) {
@@ -371,7 +445,7 @@ async function main(email, password, meetCode, port, sessionState, page) {
 }
 
 async function cleanupMeetSession(sessionState) {
-  const { ws, browser, currentStream, speakerTrackerTask } = sessionState;
+  const { ws, chatWS, browser, currentStream, speakerTrackerTask } = sessionState;
   sessionState.terminateRequested = true;
 
   if (currentStream) {
@@ -380,6 +454,10 @@ async function cleanupMeetSession(sessionState) {
 
   if (ws && ws.readyState === ws.OPEN) {
     ws.close();
+  }
+
+  if (chatWS && chatWS.readyState === WebSocket.OPEN) {
+    try { chatWS.close(); } catch {}
   }
 
   if (speakerTrackerTask) {
@@ -394,6 +472,7 @@ async function cleanupMeetSession(sessionState) {
 
   sessionState.browser = null;
   sessionState.ws = null;
+  sessionState.chatWS = null;
   sessionState.currentStream = null;
   sessionState.terminateRequested = false;
 }

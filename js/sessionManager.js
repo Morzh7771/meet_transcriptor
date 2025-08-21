@@ -5,15 +5,17 @@ class SessionManager {
     this.sessions = new Map(); // sessionId → session data
   }
 
-  async startSession(email, password, sessionId, meetCode, wsPort) {
+  async startSession(email, password, sessionId, meetCode, wsPort, chatPort) {
     const session = {
       sessionId,
       meetCode,
       wsPort,
+      chatPort,
       browser: null,
       page: null,
       currentStream: null,
       ws: null,
+      chatWS: null,
       terminateRequested: false,
       speakerTrackerTask: null,
     };
@@ -25,7 +27,7 @@ class SessionManager {
 
       this.sessions.set(sessionId, session);
 
-      joinMeetAndRecord(email, password, session, page, meetCode, wsPort)
+      joinMeetAndRecord(email, password, session, page, meetCode, wsPort, chatPort)
         .catch(err => {
           console.error(`Session ${sessionId} crashed:`, err.message);
         });
@@ -76,6 +78,9 @@ class SessionManager {
       } catch {}
     }
 
+    if (session.chatWS && session.chatWS.readyState === session.chatWS.OPEN) {
+      try { session.chatWS.close(); } catch {}
+    }
     if (session.ws && session.ws.readyState === session.ws.OPEN) {
       session.ws.close();
     }

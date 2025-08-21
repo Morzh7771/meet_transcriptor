@@ -46,24 +46,28 @@ class Facade(BaseFacade):
         Args:
             meet_code (str): The Google Meet code to record
         """
+        chat_port = None
         ws_port = None
         audio_server = None
         ws_task = None
         
         try:
             ws_port = await self.find_free_port()
-            self.logger.info(f"🚀 Starting parallel session for meet: {meet_code} on port {ws_port}")
+            chat_port = await self.find_free_port()
+            while chat_port == ws_port:
+                chat_port = await self.find_free_port()
+            self.logger.info(f"🚀 Starting parallel session for meet: {meet_code} on port {ws_port} and chat-port {chat_port}")
         
             audio_server = AudioServer()
             # Start recording session
-            ws_task = asyncio.create_task(audio_server.start(user_id, meet_code, meeting_language, ws_port))
+            ws_task = asyncio.create_task(audio_server.start(user_id, meet_code, meeting_language, ws_port, chat_port))
             await asyncio.sleep(1)  # Give WebSocket time to initialize
             
             # Connect JS plugin
-            await self.js_plugin_api.connect(meet_code, ws_port)
+            await self.js_plugin_api.connect(meet_code, ws_port, chat_port)
         
             await ws_task
-            
+
             self.logger.info(f"Session for {meet_code} complete.")
             
         except Exception as e:
@@ -77,3 +81,4 @@ class Facade(BaseFacade):
         
         finally:
             self.session_done.set()
+            
