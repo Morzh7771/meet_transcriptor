@@ -1,11 +1,8 @@
 import aiofiles
 import tiktoken
-from src.backend.utils.logger import CustomLog
 from src.backend.core.baseFacade import BaseFacade
 from src.backend.prompts.promptFacade import PromptFacade
 from src.backend.models.llm_models import MatchSpeakersOtput
-
-log = CustomLog()
 
 class Transcriber(BaseFacade):
     _instance = None
@@ -21,7 +18,7 @@ class Transcriber(BaseFacade):
         self.CHUNK_SIZE = 10_000
 
     async def transcribe(self, webm_file: str, return_segments: bool = False, language: str = None) -> str:
-        log.info(f" Sending file {webm_file} to Whisper API...")
+        self.logger.info(f" Sending file {webm_file} to Whisper API...")
 
         async with aiofiles.open(webm_file, 'rb') as f:
             data = await f.read()
@@ -29,7 +26,7 @@ class Transcriber(BaseFacade):
             response = await self.audio_completion(webm_file, data, return_segments, language)
             return response
         except Exception as e:
-            log.error(f"❌ Whisper error: {e}")
+            self.logger.error(f"❌ Whisper error: {e}")
             return ""
 
     async def match_transcript_speakers(self, real_time_transcript, afterwards_transcript):

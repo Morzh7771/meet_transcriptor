@@ -1,22 +1,18 @@
 from src.backend.llm.historyFacade import HistoryFacade
-from src.backend.utils.logger import CustomLog
 from src.backend.llm.routerFacade import RouterAgent
 from src.backend.prompts.promptFacade import PromptFacade
-import json
+from src.backend.core.baseFacade import BaseFacade
 from datetime import datetime, timedelta
 
-log = CustomLog()
 
-class ChatBot:
+class ChatBot(BaseFacade):
     def __init__(self):
         self.history = HistoryFacade()
         self.router = RouterAgent()
     
     async def process_message(self, meet_id, timestamp, role, message, current_transcript):
-        log.info(f"Inside the process_message function, timestamp is: {timestamp}")
 
         timestamp_sec = timestamp / 1000
-        # log.info(f'Timestamp_sec is: {timestamp_sec}')
         dt = datetime.fromtimestamp(timestamp_sec)
 
         prompt_template = PromptFacade.get_prompt("chat", user_query=message, meeting_transcript=current_transcript)
@@ -24,7 +20,6 @@ class ChatBot:
         prompt = eval(prompt_template)
 
         if not await self.history.get_history(meet_id):
-            # log.info("Adding the system message")
             await self.history.add_system_message(meet_id, datetime.now() - timedelta(minutes=1), role, prompt[0]["content"]["text"])
 
         await self.history.add_user_message(meet_id, dt, role, prompt[1]["content"]["text"])

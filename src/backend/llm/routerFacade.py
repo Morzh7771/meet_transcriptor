@@ -1,12 +1,7 @@
-import instructor
-from openai import AsyncOpenAI
 from src.backend.models.llm_models import RouterResponse
-import os
-from dotenv import load_dotenv
+from src.backend.core.baseFacade import BaseFacade
 
-load_dotenv()
-
-class RouterAgent:
+class RouterAgent(BaseFacade):
 
     _instance = None
 
@@ -16,8 +11,7 @@ class RouterAgent:
         return cls._instance
 
     def __init__(self):
-        self.raw_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.client = instructor.from_openai(self.raw_client)
+        super().__init__()
 
     async def __call__(self, chat_history, model="gpt-4", temperature=0.5):
 

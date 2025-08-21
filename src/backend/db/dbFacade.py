@@ -1,15 +1,11 @@
-import asyncio
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy import text, select
 
 
-from sqlalchemy.dialects.postgresql import UUID
 from semantic_chunkers import StatisticalChunker
 from semantic_router.encoders import OpenAIEncoder
-from datetime import datetime
-import uuid
 
 
 from src.backend.db.tables import *

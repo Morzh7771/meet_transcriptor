@@ -1,11 +1,8 @@
-import aiofiles
 import tiktoken
-from src.backend.utils.logger import CustomLog
 from src.backend.core.baseFacade import BaseFacade
 from src.backend.prompts.promptFacade import PromptFacade
 from src.backend.models.llm_models import NotesResponse, SummarizerResponse, OverviewResponse, ActionItemsResponse
 
-log = CustomLog()
 
 class MeetingAnalizer(BaseFacade):
     _instance = None

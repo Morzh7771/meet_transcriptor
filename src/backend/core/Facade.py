@@ -2,22 +2,17 @@ import os
 import socket
 import random
 import asyncio
-
-from dotenv import load_dotenv
 from src.backend.api.js_plagin_api import JsPluginApi
 from src.backend.audio.audio_server import AudioServer
 from src.backend.core.baseFacade import BaseFacade
-
-load_dotenv()
 
 
 class Facade(BaseFacade):
     def __init__(self):
         super().__init__()
-        # TODO: move to configs
-        self.email = os.getenv("EMAIL")
-        self.password = os.getenv("PASSWORD")
-        self.backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+        self.email = self.configs.account.EMAIL
+        self.password = self.configs.account.PASSWORD
+        self.backend_url = self.configs.backend.BACKEND_URL
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)
         self.session_done = asyncio.Event()
 

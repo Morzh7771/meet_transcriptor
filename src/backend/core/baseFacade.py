@@ -1,7 +1,6 @@
 from openai import AsyncOpenAI
 import instructor
 from pydantic import BaseModel
-import os
 from src.backend.utils.configs import Config
 from src.backend.utils.logger import CustomLog
 

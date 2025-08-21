@@ -8,19 +8,18 @@ import tempfile
 import math
 # from src.backend.llm.transcriber import Transcriber
 from src.backend.modules.transcriber import Transcriber
-from src.backend.utils.logger import CustomLog
+from src.backend.core.baseFacade import BaseFacade
 from src.backend.db.dbFacade import DBFacade
 from src.backend.models.db_models import MeetUpdate
 from src.backend.modules.meetingAnalizer import MeetingAnalizer
 
-log = CustomLog()
-
-class TranscriptManager:
+class TranscriptManager(BaseFacade):
     def __init__(self):
+        super().__init__()
         self.transcriber = Transcriber()
         self.db = DBFacade()
-        self.paths = None
-        self.full_transcript_buffer = None
+        self.paths = None # this as well
+        self.full_transcript_buffer = None # What to do with this (musn't be a singleton)
         self.MAX_CHUNK_DURATION_SEC = 290
         self.CHUNK_EXTENSION = ".webm"
         self.meeting_analizer = MeetingAnalizer()
@@ -111,7 +110,7 @@ class TranscriptManager:
 
 
     async def transcribe_chunk(self, webm_path, timestamp, chunk_start_time, language):
-        log.info(f" Transcribing: {webm_path}")
+        self.logger.info(f" Transcribing: {webm_path}")
         try:
             result = await self.transcriber.transcribe(webm_path, return_segments=True, language=language)
             text_lines = []
@@ -122,17 +121,17 @@ class TranscriptManager:
                 speaker_events = json.load(f)
 
             speaker_ranges = self.get_speaker_ranges(speaker_events)
-            log.info(f"Speaker ranges are: {speaker_ranges}")
+            self.logger.info(f"Speaker ranges are: {speaker_ranges}")
 
             if not speaker_ranges:
-                log.info("No active speakers in this chunk; skipping transcript append.")
+                self.logger.info("No active speakers in this chunk; skipping transcript append.")
                 return
 
             if isinstance(result, str):
                 try:
                     result = json.loads(result)
                 except json.JSONDecodeError:
-                    log.error("Could not parse response from Whisper as JSON")
+                    self.logger.error("Could not parse response from Whisper as JSON")
                     return
 
             for seg in result["segments"]:
@@ -143,29 +142,29 @@ class TranscriptManager:
                     text_lines.append(f"{speaker}: {seg['text'].strip()}")
 
             full_text = "\n".join(text_lines)
-            log.info(f"The transcript is: {full_text}")
+            self.logger.info(f"The transcript is: {full_text}")
 
             self.full_transcript_buffer.extend(text_lines)
             # TODO: add slm for improving chunks quality
 
         except Exception as e:
-            log.error(f"Transcription error: {e}")
+            self.logger.error(f"Transcription error: {e}")
 
     async def transcribe_and_save_full_recording(self, webm_path, language, meet_id):
         if not webm_path or not os.path.exists(webm_path):
-            log.error("❌ Nothing to transcribe: audio path is empty or file doesn't exist")
+            self.logger.error("❌ Nothing to transcribe: audio path is empty or file doesn't exist")
             return
 
-        log.info("Inside transcribe_and_save_full_recording before try-except")
+        self.logger.info("Inside transcribe_and_save_full_recording before try-except")
 
         try:
-            log.info("Inside try-except")
+            self.logger.info("Inside try-except")
             audio = AudioSegment.from_file(webm_path)
             duration_sec = len(audio) / 1000
-            log.info(f"Full audio length: {duration_sec:.2f} seconds")
+            self.logger.info(f"Full audio length: {duration_sec:.2f} seconds")
 
             num_chunks = math.ceil(duration_sec / self.MAX_CHUNK_DURATION_SEC)
-            log.info(f"Splitting into {num_chunks} chunks (≤ {self.MAX_CHUNK_DURATION_SEC} sec each)")
+            self.logger.info(f"Splitting into {num_chunks} chunks (≤ {self.MAX_CHUNK_DURATION_SEC} sec each)")
 
             all_text = []
 
@@ -179,14 +178,14 @@ class TranscriptManager:
                     chunk_path = tmp_file.name
 
                 try:
-                    log.info(f"🧠 Transcribing chunk {i+1}/{num_chunks}")
+                    self.logger.info(f"🧠 Transcribing chunk {i+1}/{num_chunks}")
                     result = await self.transcriber.transcribe(chunk_path, language=language)
                     if result:
                         all_text.append(result.strip())
                     else:
-                        log.warning(f"⚠️ Empty result for chunk {i+1}")
+                        self.logger.warning(f"⚠️ Empty result for chunk {i+1}")
                 except Exception as e:
-                    log.error(f"❌ Error transcribing chunk {i+1}: {e}")
+                    self.logger.error(f"❌ Error transcribing chunk {i+1}: {e}")
 
                 os.remove(chunk_path)
 
@@ -197,11 +196,11 @@ class TranscriptManager:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(full_transcript_raw)
 
-            log.info(f"✅ Full transcript saved to: {file_path}")
+            self.logger.info(f"✅ Full transcript saved to: {file_path}")
 
             full_transcript = await self.transcriber.match_transcript_speakers("\n".join(self.full_transcript_buffer), full_transcript_raw)
             full_transcript_text = "\n".join([f"{segment.speaker}: {segment.text}" for segment in full_transcript])
-            log.info(f"The full transcript returned from llm call is: {full_transcript_text}")
+            self.logger.info(f"The full transcript returned from llm call is: {full_transcript_text}")
 
             overview = await self.meeting_analizer.generate_overview(full_transcript_text)
             overview = overview.overview
@@ -212,7 +211,7 @@ class TranscriptManager:
             notes = notes.notes
             action_items = await self.meeting_analizer.generate_action_items(full_transcript_text)
             action_items = action_items.action_items
-            log.info(f"The summary is: {summary}\nThe overview is: {overview}\nThe tags are: {tags}\nThe notes are: {notes}\nThe action_items are: {action_items}")
+            self.logger.info(f"The summary is: {summary}\nThe overview is: {overview}\nThe tags are: {tags}\nThe notes are: {notes}\nThe action_items are: {action_items}")
 
             await self.db.update_meet(meet_id, MeetUpdate(
                 transcript=full_transcript_text, 
@@ -230,19 +229,19 @@ class TranscriptManager:
             self.reset_transcript_buffer()
 
         except Exception as e:
-            log.error(f"❌ Failed to process full recording: {e}")
+            self.logger.error(f"❌ Failed to process full recording: {e}")
 
 
     def save_full_transcript(self):
         if not self.full_transcript_buffer:
-            log.error("❌ Nothing to save: transcript buffer is empty")
+            self.logger.error("❌ Nothing to save: transcript buffer is empty")
             return
 
         file_path = os.path.join(self.paths["full"], "full_transcript.txt")
         with open(file_path, "w", encoding="utf-8") as f:
             f.write("\n".join(self.full_transcript_buffer))
 
-        log.info(f"📝 Full transcript saved to: {file_path}")
+        self.logger.info(f"📝 Full transcript saved to: {file_path}")
 
     def save_full(self):
 
@@ -258,16 +257,16 @@ class TranscriptManager:
             for file in transcript_files:
                 with open(file, "r", encoding="utf-8") as infile:
                     outfile.write(infile.read() + "\t")
-        log.info(f" Full transcript saved: {file_path}")
+        self.logger.info(f" Full transcript saved: {file_path}")
 
     def _merge_audio(self):
         webm_files = sorted(glob(os.path.join(self.paths["audio"], "chunk_*.webm")))
         valid_files = [f for f in webm_files if os.path.getsize(f) > 1024]
-        log.info(f"The number of webm files is: {len(webm_files)}")
-        log.info(f"The number of valid files is: {len(valid_files)}")
+        self.logger.info(f"The number of webm files is: {len(webm_files)}")
+        self.logger.info(f"The number of valid files is: {len(valid_files)}")
         
         if not valid_files:
-            log.error("❌ No valid audio chunks for merging")
+            self.logger.error("❌ No valid audio chunks for merging")
             return None
 
         concat_file = os.path.join(self.paths["full"], "concat_list.txt")
@@ -282,10 +281,10 @@ class TranscriptManager:
                 "ffmpeg", "-f", "concat", "-safe", "0", "-i", concat_file, 
                 "-c", "copy", output_file
             ], check=True)
-            log.info(f" Full audio saved: {output_file}")
+            self.logger.info(f" Full audio saved: {output_file}")
             return output_file
         except subprocess.CalledProcessError as e:
-            log.error("❌ FFmpeg merge error:", e)
+            self.logger.error("❌ FFmpeg merge error:", e)
             return None
 
 

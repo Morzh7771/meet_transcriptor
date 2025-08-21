@@ -1,9 +1,7 @@
 from sqlalchemy import ForeignKey, Integer, String, DateTime, PrimaryKeyConstraint, Text
-
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from datetime import datetime
 import uuid
-from typing import Optional
 
 
 class Base(DeclarativeBase):

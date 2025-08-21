@@ -7,12 +7,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.backend import db
 
-
 class ConfigBase(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
+class AccountConfig(ConfigBase):
+    EMAIL: str = Field(..., description="Email address of the qontext bot")
+    PASSWORD: str = Field(..., description="Password of the qontext google account")
+
+class BackendConfig(ConfigBase):
+    BACKEND_URL: str = Field(..., description="Backed url of js")
 
 class OpenAIConfig(ConfigBase):
     model_config = SettingsConfigDict(env_prefix="OPENAI_")
@@ -31,18 +36,11 @@ class DBConfig(ConfigBase):
     ECHO: bool = False
 
 
-
-
-
-
-
-
-
-
-
 class Config(BaseSettings):
     openai: OpenAIConfig = Field(default_factory=OpenAIConfig)
     db: DBConfig = Field(default_factory=DBConfig)
+    account: AccountConfig = Field(default_factory=AccountConfig)
+    backend: BackendConfig = Field(default_factory=BackendConfig)
 
     @classmethod
     def load_config(cls) -> "Config":

@@ -2,14 +2,14 @@ import os
 import time
 from src.backend.utils.logger import CustomLog
 
-log = CustomLog()
-
-class ChunkHandler:
+class ChunkHandler():
     def __init__(self, chunk_duration=10):
+        super().__init__()
         self.chunk_buffer = bytearray()
         self.t0 = time.time()
         self.chunk_duration = chunk_duration
         self.paths = None
+        self.logger = CustomLog()
 
     def set_paths(self, paths):
         self.paths = paths
@@ -30,13 +30,11 @@ class ChunkHandler:
 
         with open(webm_path, "wb") as f:
             f.write(self.chunk_buffer)
-        log.info(f" Saved audio chunk: {webm_path}")
+        self.logger.info(f" Saved audio chunk: {webm_path}")
 
         self.chunk_buffer.clear()
         chunk_start_time = int(self.t0 * 1000) 
         self.t0 = time.time()
-        # log.info(f"The 'chunk_start_time' is: {chunk_start_time}")
-        # log.info(f"The 'self.t0' time is: {int(self.t0 * 1000)}")
         return webm_path, timestamp, chunk_start_time
 
     def has_data(self):
