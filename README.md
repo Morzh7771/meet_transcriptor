@@ -28,7 +28,8 @@ source .venv/bin/activate
 
 **Terminal 1:**
 ```bash
-xvfb-run -a node js/server.js
+su - pulseuser -c "pulseaudio --start"
+xvfb-run -a node js/main.js
 ```
 
 **Terminal 2:**

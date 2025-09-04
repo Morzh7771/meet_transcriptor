@@ -23,6 +23,7 @@ class TranscriptManager(BaseFacade):
         self.MAX_CHUNK_DURATION_SEC = 290
         self.CHUNK_EXTENSION = ".webm"
         self.meeting_analizer = MeetingAnalizer()
+        self.audio_start_time = None
 
     def set_paths(self, paths):
         self.paths = paths
@@ -58,7 +59,7 @@ class TranscriptManager(BaseFacade):
             previous_end = entry["end_ms"]
 
         merged_speaker_ranges.append({"speaker": last_speaker,
-                                    "start_ms": last_start, 
+                                    "start_ms": last_start,
                                     "end_ms": previous_end})
 
         return merged_speaker_ranges
@@ -112,6 +113,12 @@ class TranscriptManager(BaseFacade):
     async def transcribe_chunk(self, webm_path, timestamp, chunk_start_time, language):
         self.logger.info(f" Transcribing: {webm_path}")
         try:
+            if not self.audio_start_time:
+                self.audio_start_time = chunk_start_time # set up the start time of the recording (wrong)
+            elif chunk_start_time - self.audio_start_time > 50_000:
+                print(f"The difference is bigger than 30 seconds:\nChunk_str_time = {chunk_start_time}\naudio_str_time = {self.audio_start_time}")
+                self.audio_start_time = chunk_start_time
+
             result = await self.transcriber.transcribe(webm_path, return_segments=True, language=language)
             text_lines = []
 
@@ -133,13 +140,24 @@ class TranscriptManager(BaseFacade):
                 except json.JSONDecodeError:
                     self.logger.error("Could not parse response from Whisper as JSON")
                     return
+            
+            seg_starting_point = int((chunk_start_time - self.audio_start_time) // 1000)
 
             for seg in result["segments"]:
                 seg_abs_start = chunk_start_time + seg["start"] * 1000
                 seg_abs_end = chunk_start_time + seg["end"] * 1000
+                seg_rel_start = seg_starting_point + seg["start"]
+                seg_rel_end = seg_starting_point + seg["end"]
                 speaker = self.find_active_speaker(seg_abs_start, seg_abs_end, speaker_ranges)
                 if speaker:
-                    text_lines.append(f"{speaker}: {seg['text'].strip()}")
+                    start_h = int(seg_rel_start // 3600)
+                    start_m = int((seg_rel_start % 3600) // 60)
+                    start_s = int(seg_rel_start % 60)
+
+                    end_h = int(seg_rel_end // 3600)
+                    end_m = int((seg_rel_end % 3600) // 60)
+                    end_s = int(seg_rel_end % 60)
+                    text_lines.append(f"({start_h:02d}:{start_m:02d}:{start_s:02d}-{end_h:02d}:{end_m:02d}:{end_s:02d}) {speaker}: {seg['text'].strip()}")
 
             full_text = "\n".join(text_lines)
             self.logger.info(f"The transcript is: {full_text}")
