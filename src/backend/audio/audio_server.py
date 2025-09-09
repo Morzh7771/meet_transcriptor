@@ -64,7 +64,6 @@ class AudioServer():
             data = json.loads(message)
             if "speakers" in data and "time" in data:
                 self.speaker_tracker.add_event(data)
-            
         except Exception as e:
             self.logger.error(f"Error handling message: {e}")
     
@@ -93,10 +92,9 @@ class AudioServer():
                         self.processed_messages.add(msg_id)
 
                         if msg.get("massage") and msg.get("name") != "Вы":
-                            response = await self.chat_bot.process_message(
+                            response = await self.chat_bot.process_real_time_meet_message(
                                 meet_id,
                                 msg.get("raw_time", datetime.now()),
-                                msg.get("name"),
                                 msg["massage"],
                                 self.transcript_manager.full_transcript_buffer,
                             )
@@ -115,7 +113,6 @@ class AudioServer():
             self.connection_closed.set()
             self.logger.info("Connection_closed.set() closed")
 
-
     async def start(self, user_id, meet_code, meeting_language, ws_port, chat_port):
         session_id = f"{meet_code}_{time.strftime('%Y-%m-%d_%H-%M-%S')}"
         # TODO: save it in ak blob
@@ -130,9 +127,12 @@ class AudioServer():
 
         meet_id = await self.db.create_meet(MeetCreate(
             user_id=user_id,
+            meet_code=meet_code,
             title="Test meet",
             date=datetime.now(),
-            language=meeting_language))
+            language=meeting_language,
+            participants=[]
+            ))
         
         self.logger.info(f"The meeting is successfully created and meet_id is: {meet_id}")
 
@@ -142,6 +142,7 @@ class AudioServer():
         for component in [self.chunk_handler, self.transcript_manager, self.speaker_tracker]:
             component.set_paths(paths)
 
+        self.speaker_tracker.reset_speakers()
         self.transcript_manager.reset_transcript_buffer()
 
         self.logger.info(f" Starting Whisper WebSocket server on port {ws_port}")
@@ -184,8 +185,18 @@ class AudioServer():
         if not os.path.exists(full_audio_path) or os.path.getsize(full_audio_path) < 1024:
             self.logger.error(f"Skipping Whisper full transcription — file not found or too small: {full_audio_path}")
             return
+        
+        speakers_list = self.speaker_tracker.get_unique_speakers()
+        self.logger.info(f"Collected unique speakers: {speakers_list}")
+        
         self.logger.info("Starting transcription and saving it of full audio")
-        await self.transcript_manager.transcribe_and_save_full_recording(full_audio_path, meeting_language, meet_id)
+
+        await self.transcript_manager.transcribe_and_save_full_recording(
+            full_audio_path, 
+            meeting_language, 
+            meet_id, 
+            speakers_list  
+        )
 
     async def terminate(self):
         self.logger.info("Terminating session manually")
@@ -230,4 +241,3 @@ class AudioServer():
             except websockets.exceptions.ConnectionClosed:
                 print("Connection closed")
                 break
-

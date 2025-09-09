@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -32,7 +32,7 @@ class CompanyResponse(BaseModel):
 
 class UserCreate(BaseModel):
     email: str = Field(..., min_length=1, max_length=100, description="User email address")
-    company_id: str = Field(..., min_length=1, max_length=36, description="User email address")
+    company_id: str = Field(..., min_length=1, max_length=36, description="User company ID")
     username: str
     password: str
     role: str
@@ -64,8 +64,10 @@ class MeetCreate(BaseModel):
     summary: Optional[str] = "No summary provided"
     date: datetime
     duration: Optional[int] = 0
+    meet_code: str
     overview: Optional[str] = "No overview provided"
     notes: Optional[str] = "No notes provided"
+    participants: Optional[List[str]] = None
     action_items: Optional[str] = "No action items provided"
     transcript: Optional[str] = "No transcript provided"
     language: str
@@ -75,10 +77,12 @@ class MeetUpdate(BaseModel):
     user_id: Optional[str] = None
     title: Optional[str] = None
     summary: Optional[str] = None
+    meet_code: Optional[str] = None
     date: Optional[datetime] = None
     duration: Optional[int] = None
     overview: Optional[str] = None
     notes: Optional[str] = None
+    participants: Optional[List[str]] = None 
     action_items: Optional[str] = None
     transcript: Optional[str] = None
     language: Optional[str] = None
@@ -91,8 +95,10 @@ class MeetResponse(BaseModel):
     summary: str
     date: datetime
     duration: int
+    meet_code: str
     overview: str
     notes: str
+    participants: List[str]
     action_items: str
     transcript: str
     language: str

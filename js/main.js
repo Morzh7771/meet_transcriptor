@@ -65,5 +65,5 @@ app.listen(PORT, () => {
 
 setInterval(() => {
   process.stdout.write('.');
-  require('fs').writeFileSync('/tmp/node-alive', Date.now().toString());
+  require('fs').writeFileSync('/temp/node-alive', Date.now().toString());
 }, 5000);

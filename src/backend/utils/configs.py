@@ -13,6 +13,7 @@ class ConfigBase(BaseSettings):
     )
 
 class AccountConfig(ConfigBase):
+    ACC:str= Field(..., description="Email address of the qontext bot")
     EMAIL: str = Field(..., description="Email address of the qontext bot")
     PASSWORD: str = Field(..., description="Password of the qontext google account")
 

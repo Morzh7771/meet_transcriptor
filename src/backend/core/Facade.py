@@ -2,20 +2,22 @@ import os
 import socket
 import random
 import asyncio
+from uuid import uuid4
 from src.backend.api.js_plagin_api import JsPluginApi
 from src.backend.audio.audio_server import AudioServer
 from src.backend.core.baseFacade import BaseFacade
-
+from src.backend.llm.historyFacade import HistoryFacade
+from src.backend.modules.chatBot import ChatBot
 
 class Facade(BaseFacade):
     def __init__(self):
         super().__init__()
-        self.email = self.configs.account.EMAIL
+        self.email = self.configs.account.ACC
         self.password = self.configs.account.PASSWORD
         self.backend_url = self.configs.backend.BACKEND_URL
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)
         self.session_done = asyncio.Event()
-
+        self.chat_bot = ChatBot()
 
     async def find_free_port(self, max_attempts=1000):
         tried_ports = set()
@@ -76,4 +78,9 @@ class Facade(BaseFacade):
         
         finally:
             self.session_done.set()
+            
+    async def startMessageBot(self, message: str, meetId: str, chat_id=None):
+        chatID = chat_id if chat_id is not None else str(uuid4())
+        result = await self.chat_bot.process_meet_questions(chatID,meetId,message)
+        return chatID,result
             

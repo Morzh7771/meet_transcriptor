@@ -41,7 +41,7 @@ python3 main.py
 
 **Terminal 1:**
 ```bash
-node js/server.js
+node js/main.js
 ```
 
 **Terminal 2:**

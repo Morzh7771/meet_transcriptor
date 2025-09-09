@@ -239,6 +239,8 @@ class DBFacade(BaseFacade):
                 summary=meet_data.summary,
                 date=meet_data.date,
                 duration=meet_data.duration,
+                meet_code=meet_data.meet_code,
+                participants=meet_data.participants,
                 overview=meet_data.overview,
                 notes=meet_data.notes,
                 action_items=meet_data.action_items,
@@ -509,3 +511,72 @@ class DBFacade(BaseFacade):
         """Check if participant exists"""
         participant = await self.get_participant_by_id(participant_id)
         return True if participant else False
+    
+    # ============ Front End chat bot in meet list ============
+
+    async def create_front_chat_massage(self, chat_data: "MeetingChatMessageCreate") -> "MeetingChatMessageResponse":
+        """CREATE - Insert new meeting chat message"""
+        async with self.AsyncSessionLocal() as session:
+            chat_message = MeetingChatMessage(
+                meet_id=chat_data.meet_id,
+                time=chat_data.time,
+                role=chat_data.role,
+                content=chat_data.content
+            )
+            session.add(chat_message)
+            await session.commit()
+            await session.refresh(chat_message)
+            return MeetingChatMessageResponse.model_validate(chat_message)
+
+    async def get_front_chat_message_by_id(self, chat_id: str) -> Optional["MeetingChatMessageResponse"]:
+        """READ - Get meeting chat message by ID"""
+        async with self.AsyncSessionLocal() as session:
+            chat_message = await session.get(MeetingChatMessage, chat_id)
+            return MeetingChatMessageResponse.model_validate(chat_message) if chat_message else None
+
+    async def get_all_front_chat_messages(self) -> List["MeetingChatMessageResponse"]:
+        """READ - Get all meeting chat messages"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(MeetingChatMessage)
+            result = await session.execute(stmt)
+            chat_messages = result.scalars().all()
+            return [MeetingChatMessageResponse.model_validate(msg) for msg in chat_messages]
+
+    async def get_front_chat_by_meet_id(self, meet_id: str) -> List["MeetingChatMessageResponse"]:
+        """READ - Get all chat messages for a specific meet"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(MeetingChatMessage).where(MeetingChatMessage.meet_id == meet_id).order_by(MeetingChatMessage.time)
+            result = await session.execute(stmt)
+            chat_messages = result.scalars().all()
+            return [MeetingChatMessageResponse.model_validate(msg) for msg in chat_messages]
+
+    async def update_meeting_chat_message(self, chat_id: str, chat_update: "MeetingChatMessageUpdate") -> Optional["MeetingChatMessageResponse"]:
+        """UPDATE - Update meeting chat message fields"""
+        async with self.AsyncSessionLocal() as session:
+            chat_message = await session.get(MeetingChatMessage, chat_id)
+            if not chat_message:
+                return None
+
+            update_data = chat_update.model_dump(exclude_unset=True)
+            for field, value in update_data.items():
+                setattr(chat_message, field, value)
+
+            await session.commit()
+            await session.refresh(chat_message)
+            return MeetingChatMessageResponse.model_validate(chat_message)
+
+    async def delete_meeting_chat_message(self, chat_id: str) -> bool:
+        """DELETE - Remove meeting chat message from database"""
+        async with self.AsyncSessionLocal() as session:
+            chat_message = await session.get(MeetingChatMessage, chat_id)
+            if not chat_message:
+                return False
+
+            await session.delete(chat_message)
+            await session.commit()
+            return True
+
+    async def meeting_chat_message_exists(self, chat_id: str) -> bool:
+        """Check if meeting chat message exists"""
+        chat_message = await self.get_meeting_chat_message_by_id(chat_id)
+        return True if chat_message else False

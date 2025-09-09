@@ -25,8 +25,7 @@ version: 1.0
             "text": """
             User question: {{ user_query }}
             Meeting transcript:
-            {% for line in meeting_transcript %}
-                {{ line }}
+                {{ meeting_transcript }}
             {% endfor %}
             """
         }

@@ -13,12 +13,11 @@ class RouterAgent(BaseFacade):
     def __init__(self):
         super().__init__()
 
-    async def __call__(self, chat_history, model="gpt-4", temperature=0.5):
+    async def __call__(self, chat_history, model="gpt-5-2025-08-07"):
 
         response = await self.client.chat.completions.create(
             model = model,
             messages = chat_history,
-            temperature = temperature,
             response_model=RouterResponse
         )
 

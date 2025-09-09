@@ -1,5 +1,6 @@
-from sqlalchemy import ForeignKey, Integer, String, DateTime, PrimaryKeyConstraint, Text
+from sqlalchemy import ForeignKey, Integer, String, DateTime, PrimaryKeyConstraint, Text, JSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from typing import List
 from datetime import datetime
 import uuid
 
@@ -72,7 +73,9 @@ class Meet(Base):
     date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     duration: Mapped[int] = mapped_column(Integer, nullable=True)
     overview: Mapped[str] = mapped_column(Text, nullable=True)
+    meet_code: Mapped[str] = mapped_column(Text, nullable=True)
     notes: Mapped[str] = mapped_column(Text, nullable=True)
+    participants: Mapped[List[str]] = mapped_column(JSON, nullable=True)
     action_items: Mapped[str] = mapped_column(Text, nullable=True)
     transcript: Mapped[str] = mapped_column(Text, nullable=True)
     language: Mapped[str] = mapped_column(String(50), nullable=False)

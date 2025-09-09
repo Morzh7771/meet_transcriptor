@@ -168,7 +168,7 @@ class TranscriptManager(BaseFacade):
         except Exception as e:
             self.logger.error(f"Transcription error: {e}")
 
-    async def transcribe_and_save_full_recording(self, webm_path, language, meet_id):
+    async def transcribe_and_save_full_recording(self, webm_path, language, meet_id, participants):
         if not webm_path or not os.path.exists(webm_path):
             self.logger.error("❌ Nothing to transcribe: audio path is empty or file doesn't exist")
             return
@@ -230,13 +230,15 @@ class TranscriptManager(BaseFacade):
             action_items = await self.meeting_analizer.generate_action_items(full_transcript_text)
             action_items = action_items.action_items
             self.logger.info(f"The summary is: {summary}\nThe overview is: {overview}\nThe tags are: {tags}\nThe notes are: {notes}\nThe action_items are: {action_items}")
-
+            
             await self.db.update_meet(meet_id, MeetUpdate(
                 transcript=full_transcript_text, 
                 overview="\n".join(overview),
                 summary=summary,
+                duration=math.ceil(duration_sec),
                 tags=",".join(tags),
                 action_items=action_items,
+                participants=participants,
                 notes=notes))
             
             full_transcript_path = os.path.join(self.paths["full"], "full_final_transcript.txt")

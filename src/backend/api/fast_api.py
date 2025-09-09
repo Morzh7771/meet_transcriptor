@@ -2,15 +2,29 @@ import asyncio
 from typing import Dict
 
 from fastapi import FastAPI, HTTPException, Body
-from src.backend.models.api_models import StartMeetingRequest
+from fastapi.middleware.cors import CORSMiddleware
+from src.backend.models.api_models import StartMeetingRequest,MeetBotChat
 
 from src.backend.core.Facade import Facade
 
+
+import asyncio
+from src.backend.db.dbFacade import DBFacade
+
 app = FastAPI(title="Meet-Recorder Controller")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # React app URL
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 # One Facade for the whole service.
 facade = Facade()
-
+db = DBFacade()
 # Keep track of recorder coroutines keyed by meet-code (or any session ID you prefer).
 _session_tasks: Dict[str, asyncio.Task] = {}
 
@@ -35,7 +49,6 @@ async def start(request: StartMeetingRequest):
     return {"status": "started", "meet_code": meet_code}
 
 
-
 @app.post("/terminate")
 async def terminate(meet_code: str = Body(..., embed=False)):
     """
@@ -57,3 +70,15 @@ async def terminate(meet_code: str = Body(..., embed=False)):
 
     _session_tasks.pop(meet_code, None)
     return {"status": "terminated", "meet_code": meet_code}
+
+
+@app.post("/getAllMeets")
+async def getAllMeets():
+    result = await db.get_all_meets()
+    return result
+
+
+@app.post("/meetBotChat")
+async def getAllMeets(request: MeetBotChat):
+    res = await facade.startMessageBot(request.message,request.meet_id,request.chat_id)
+    return res

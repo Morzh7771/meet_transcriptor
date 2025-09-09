@@ -23,7 +23,7 @@ async def command_listener(facade_: Facade):
 
 async def main():
     await asyncio.gather(
-        facade.run_google_meet_recording_api("8686ab18-c63d-4f90-b139-e45535d2935e", "bir-gmym-wqx", "uk"), # Paste the user_id, meet code and meet language here
+        facade.run_google_meet_recording_api("611a7f92-f6ad-4458-9e82-af5cca23575e", "nzz-tevk-zab", "ru"), # Paste the user_id, meet code and meet language here
         command_listener(facade)
     )
 
