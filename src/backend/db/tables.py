@@ -109,6 +109,20 @@ class MeetingChatMessage(Base):
 
     def __repr__(self):
         return f"MeetingChatMessage(id={self.id}, meet_id={self.meet_id}, role={self.role}, time={self.time})"
+    
+    
+class FrontMessage(Base):
+    __tablename__ = "frontm_essage"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    
+    meet_id: Mapped[str] = mapped_column(ForeignKey("meet.id"), nullable=False)
+    chat_id: Mapped[str] = mapped_column(Text, nullable=False)
+    role: Mapped[str] = mapped_column(String(50), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+
+    def __repr__(self):
+        return f"MeetingChatMessage(id={self.id}, meet_id={self.meet_id}, role={self.chat_id}, time={self.time})"
 
 class Participant(Base):
     __tablename__ = "participant"

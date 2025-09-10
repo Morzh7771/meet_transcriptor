@@ -6,13 +6,12 @@ from uuid import uuid4
 from src.backend.api.js_plagin_api import JsPluginApi
 from src.backend.audio.audio_server import AudioServer
 from src.backend.core.baseFacade import BaseFacade
-from src.backend.llm.historyFacade import HistoryFacade
 from src.backend.modules.chatBot import ChatBot
 
 class Facade(BaseFacade):
     def __init__(self):
         super().__init__()
-        self.email = self.configs.account.ACC
+        self.email = self.configs.account.EMAIL
         self.password = self.configs.account.PASSWORD
         self.backend_url = self.configs.backend.BACKEND_URL
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)

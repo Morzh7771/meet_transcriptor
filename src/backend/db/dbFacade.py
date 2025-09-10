@@ -43,9 +43,6 @@ class DBFacade(BaseFacade):
         )
         self._get_engines()
 
-
-
-
     def _get_engines(self):
         self.async_engine: AsyncEngine = create_async_engine(
             self.db_url,
@@ -514,46 +511,46 @@ class DBFacade(BaseFacade):
     
     # ============ Front End chat bot in meet list ============
 
-    async def create_front_chat_massage(self, chat_data: "MeetingChatMessageCreate") -> "MeetingChatMessageResponse":
+    async def create_front_chat_massage(self, chat_data: "FrontMessageCreate") -> "FrontMessageCreate":
         """CREATE - Insert new meeting chat message"""
         async with self.AsyncSessionLocal() as session:
-            chat_message = MeetingChatMessage(
+            chat_message = FrontMessageCreate(
+                chat_id=chat_data.chat_id,
                 meet_id=chat_data.meet_id,
-                time=chat_data.time,
                 role=chat_data.role,
                 content=chat_data.content
             )
             session.add(chat_message)
             await session.commit()
             await session.refresh(chat_message)
-            return MeetingChatMessageResponse.model_validate(chat_message)
+            return FrontMessageResponse.model_validate(chat_message)
 
-    async def get_front_chat_message_by_id(self, chat_id: str) -> Optional["MeetingChatMessageResponse"]:
+    async def get_front_chat_message_by_id(self, chat_id: str) -> Optional["FrontMessageResponse"]:
         """READ - Get meeting chat message by ID"""
         async with self.AsyncSessionLocal() as session:
-            chat_message = await session.get(MeetingChatMessage, chat_id)
-            return MeetingChatMessageResponse.model_validate(chat_message) if chat_message else None
+            chat_message = await session.get(FrontMessage, chat_id)
+            return FrontMessageResponse.model_validate(chat_message) if chat_message else None
 
-    async def get_all_front_chat_messages(self) -> List["MeetingChatMessageResponse"]:
+    async def get_all_front_chat_messages(self) -> List["FrontMessageResponse"]:
         """READ - Get all meeting chat messages"""
         async with self.AsyncSessionLocal() as session:
-            stmt = select(MeetingChatMessage)
+            stmt = select(FrontMessage)
             result = await session.execute(stmt)
             chat_messages = result.scalars().all()
-            return [MeetingChatMessageResponse.model_validate(msg) for msg in chat_messages]
+            return [FrontMessageResponse.model_validate(msg) for msg in chat_messages]
 
-    async def get_front_chat_by_meet_id(self, meet_id: str) -> List["MeetingChatMessageResponse"]:
+    async def get_front_chat_by_meet_id(self, meet_id: str) -> List["FrontMessageResponse"]:
         """READ - Get all chat messages for a specific meet"""
         async with self.AsyncSessionLocal() as session:
-            stmt = select(MeetingChatMessage).where(MeetingChatMessage.meet_id == meet_id).order_by(MeetingChatMessage.time)
+            stmt = select(FrontMessage).where(FrontMessage.meet_id == meet_id).order_by(FrontMessage.time)
             result = await session.execute(stmt)
             chat_messages = result.scalars().all()
-            return [MeetingChatMessageResponse.model_validate(msg) for msg in chat_messages]
+            return [FrontMessageResponse.model_validate(msg) for msg in chat_messages]
 
-    async def update_meeting_chat_message(self, chat_id: str, chat_update: "MeetingChatMessageUpdate") -> Optional["MeetingChatMessageResponse"]:
+    async def update_front_chat_message(self, chat_id: str, chat_update: "FrontMessageUpdate") -> Optional["FrontMessageResponse"]:
         """UPDATE - Update meeting chat message fields"""
         async with self.AsyncSessionLocal() as session:
-            chat_message = await session.get(MeetingChatMessage, chat_id)
+            chat_message = await session.get(FrontMessage, chat_id)
             if not chat_message:
                 return None
 
@@ -563,12 +560,12 @@ class DBFacade(BaseFacade):
 
             await session.commit()
             await session.refresh(chat_message)
-            return MeetingChatMessageResponse.model_validate(chat_message)
+            return FrontMessageResponse.model_validate(chat_message)
 
-    async def delete_meeting_chat_message(self, chat_id: str) -> bool:
+    async def delete_front_chat_message(self, chat_id: str) -> bool:
         """DELETE - Remove meeting chat message from database"""
         async with self.AsyncSessionLocal() as session:
-            chat_message = await session.get(MeetingChatMessage, chat_id)
+            chat_message = await session.get(FrontMessage, chat_id)
             if not chat_message:
                 return False
 
@@ -576,7 +573,7 @@ class DBFacade(BaseFacade):
             await session.commit()
             return True
 
-    async def meeting_chat_message_exists(self, chat_id: str) -> bool:
+    async def meeting_front_chat_exists(self, chat_id: str) -> bool:
         """Check if meeting chat message exists"""
         chat_message = await self.get_meeting_chat_message_by_id(chat_id)
         return True if chat_message else False

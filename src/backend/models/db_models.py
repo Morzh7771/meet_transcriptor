@@ -126,7 +126,27 @@ class MeetingMessageResponse(BaseModel):
     content: str
 
     model_config = ConfigDict(from_attributes=True)
+class FrontMessageCreate(BaseModel):
+    chat_id: str
+    meet_id: str
+    content: str
+    role: str
 
+class FrontMessageUpdate(BaseModel):
+    chat_id: Optional[str] = None
+    meet_id: Optional[str] = None
+    content: Optional[str] = None
+    role: Optional[str] = None
+
+class FrontMessageResponse(BaseModel):
+    id: str
+    chat_id: str
+    meet_id: str
+    content: str
+    role: str
+    
+    model_config = ConfigDict(from_attributes=True)
+    
 class MeetingChatMessageCreate(BaseModel):
     meet_id: str
     time: datetime

@@ -37,3 +37,30 @@ class HistoryFacade:
 
     async def get_history_real_time(self, meet_id: str):
         return [{"role": msg.role, "content": msg.content} for msg in await self.db.get_chat_messages_by_meet_id(meet_id)]
+    
+    
+    
+    
+    async def add_user_message_front(self, chat_id:str, meet_id: str, message: str):
+        await self.db.create_front_chat_massage(FrontMessageCreate(
+            meet_id=meet_id,
+            chat_id=chat_id,
+            role="user",
+            content=message))
+
+    async def add_assistant_message_front(self, chat_id:str, meet_id: str, message: str):
+        await self.db.create_front_chat_massage(FrontMessageCreate(
+            meet_id=meet_id,
+            chat_id=chat_id,
+            role="assistant",
+            content=message))
+
+    async def add_system_message_front(self, chat_id:str, meet_id: str, message: str):
+        await self.db.create_front_chat_massage(FrontMessageCreate(
+            meet_id=meet_id,
+            chat_id=chat_id,
+            role="system",
+            content=message))
+
+    async def get_history_front(self, meet_id: str):
+        return [{"role": msg.role, "content": msg.content} for msg in await self.db.get_front_chat_by_meet_id(meet_id)]
