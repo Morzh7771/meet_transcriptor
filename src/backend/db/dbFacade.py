@@ -514,9 +514,10 @@ class DBFacade(BaseFacade):
     async def create_front_chat_massage(self, chat_data: "FrontMessageCreate") -> "FrontMessageCreate":
         """CREATE - Insert new meeting chat message"""
         async with self.AsyncSessionLocal() as session:
-            chat_message = FrontMessageCreate(
+            chat_message = FrontMessage(
                 chat_id=chat_data.chat_id,
                 meet_id=chat_data.meet_id,
+                time=chat_data.time,
                 role=chat_data.role,
                 content=chat_data.content
             )
@@ -539,10 +540,10 @@ class DBFacade(BaseFacade):
             chat_messages = result.scalars().all()
             return [FrontMessageResponse.model_validate(msg) for msg in chat_messages]
 
-    async def get_front_chat_by_meet_id(self, meet_id: str) -> List["FrontMessageResponse"]:
+    async def get_front_chat_by_chat_id(self, chat_id: str) -> List["FrontMessageResponse"]:
         """READ - Get all chat messages for a specific meet"""
         async with self.AsyncSessionLocal() as session:
-            stmt = select(FrontMessage).where(FrontMessage.meet_id == meet_id).order_by(FrontMessage.time)
+            stmt = select(FrontMessage).where(FrontMessage.chat_id == chat_id).order_by(FrontMessage.time)
             result = await session.execute(stmt)
             chat_messages = result.scalars().all()
             return [FrontMessageResponse.model_validate(msg) for msg in chat_messages]
@@ -573,7 +574,23 @@ class DBFacade(BaseFacade):
             await session.commit()
             return True
 
+    async def get_all_meet_topics(self, meet_id: str) -> List[List["FrontMessageResponse"]]:
+        """Get all chat messages grouped by chat_id for a specific meeting"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(FrontMessage).where(FrontMessage.meet_id == meet_id).order_by(FrontMessage.chat_id, FrontMessage.time)
+            result = await session.execute(stmt)
+            chat_messages = result.scalars().all()
+            
+            grouped_chats = {}
+            for msg in chat_messages:
+                chat_id = msg.chat_id
+                if chat_id not in grouped_chats:
+                    grouped_chats[chat_id] = []
+                grouped_chats[chat_id].append(FrontMessageResponse.model_validate(msg))
+            
+            return list(grouped_chats.values())
+
     async def meeting_front_chat_exists(self, chat_id: str) -> bool:
         """Check if meeting chat message exists"""
-        chat_message = await self.get_meeting_chat_message_by_id(chat_id)
+        chat_message = await self.get_front_chat_message_by_id(chat_id)
         return True if chat_message else False

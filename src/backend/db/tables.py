@@ -112,7 +112,7 @@ class MeetingChatMessage(Base):
     
     
 class FrontMessage(Base):
-    __tablename__ = "frontm_essage"
+    __tablename__ = "front_message"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     
@@ -120,7 +120,8 @@ class FrontMessage(Base):
     chat_id: Mapped[str] = mapped_column(Text, nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-
+    time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    
     def __repr__(self):
         return f"MeetingChatMessage(id={self.id}, meet_id={self.meet_id}, role={self.chat_id}, time={self.time})"
 

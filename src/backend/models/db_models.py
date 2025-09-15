@@ -130,12 +130,14 @@ class FrontMessageCreate(BaseModel):
     chat_id: str
     meet_id: str
     content: str
+    time: datetime 
     role: str
 
 class FrontMessageUpdate(BaseModel):
     chat_id: Optional[str] = None
     meet_id: Optional[str] = None
     content: Optional[str] = None
+    time: Optional[datetime] = None
     role: Optional[str] = None
 
 class FrontMessageResponse(BaseModel):
@@ -143,6 +145,7 @@ class FrontMessageResponse(BaseModel):
     chat_id: str
     meet_id: str
     content: str
+    time: datetime
     role: str
     
     model_config = ConfigDict(from_attributes=True)

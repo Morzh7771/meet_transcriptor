@@ -3,7 +3,7 @@ from typing import Dict
 
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
-from src.backend.models.api_models import StartMeetingRequest,MeetBotChat
+from src.backend.models.api_models import StartMeetingRequest,MeetBotChat,GetChatTopics
 
 from src.backend.core.Facade import Facade
 
@@ -82,3 +82,10 @@ async def getAllMeets():
 async def getAllMeets(request: MeetBotChat):
     res = await facade.startMessageBot(request.message,request.meet_id,request.chat_id)
     return res
+
+
+@app.post("/getChatTopics")
+async def getAllMeets(request: GetChatTopics):
+    res = await db.get_all_meet_topics(request.meet_id)
+    return res
+

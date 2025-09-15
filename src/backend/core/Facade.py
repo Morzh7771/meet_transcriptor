@@ -11,7 +11,7 @@ from src.backend.modules.chatBot import ChatBot
 class Facade(BaseFacade):
     def __init__(self):
         super().__init__()
-        self.email = self.configs.account.EMAIL
+        self.email = self.configs.account.ACC
         self.password = self.configs.account.PASSWORD
         self.backend_url = self.configs.backend.BACKEND_URL
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)

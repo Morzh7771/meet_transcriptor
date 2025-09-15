@@ -12,3 +12,7 @@ class MeetBotChat(BaseModel):
     chat_id: Optional[str] = None
     message: str
     meet_id: str
+    
+    
+class GetChatTopics(BaseModel):
+    meet_id: str

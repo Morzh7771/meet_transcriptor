@@ -94,6 +94,9 @@ class SessionManager {
   async joinMeet(page, meetCode) {
     await page.goto("https://meet.google.com/", { waitUntil: "networkidle2" });
     await logStep(page, "Meet homepage");
+    await sleep(2000);
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
     
     await page.waitForSelector('input[type="text"]');
     await page.click('input[type="text"]');
@@ -103,6 +106,8 @@ class SessionManager {
     await page.keyboard.press('Enter');
     await page.waitForNavigation({ waitUntil: "networkidle2" });
     await logStep(page, "Meeting page");
+
+   
 
     await tabUntilAllClassesMatch(page);
     await page.keyboard.press("Enter");
