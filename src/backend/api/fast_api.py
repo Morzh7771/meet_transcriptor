@@ -7,8 +7,6 @@ from src.backend.models.api_models import StartMeetingRequest,MeetBotChat,GetCha
 
 from src.backend.core.Facade import Facade
 
-
-import asyncio
 from src.backend.db.dbFacade import DBFacade
 
 app = FastAPI(title="Meet-Recorder Controller")
@@ -34,20 +32,41 @@ async def start(request: StartMeetingRequest):
     """
     Launch recording for *meet_code*.
     """
-    meet_code = request.meet_code.strip()
-    
-    if not meet_code:
-        raise HTTPException(400, detail="Body must contain a non-empty meet code")
+    try:
+        meet_code = request.meet_code.strip()
+        ws_port = await facade.find_free_port()
+        chat_port = await facade.find_free_port()
+        
+        while chat_port == ws_port:
+            chat_port = await facade.find_free_port()
+            
+        if not meet_code:
+            raise HTTPException(400, detail="Body must contain a non-empty meet code")
 
-    if meet_code in _session_tasks:
-        raise HTTPException(409, detail=f"Recording for {meet_code} is already running")
+        #if meet_code in _session_tasks:
+            #raise HTTPException(409, detail=f"Recording for {meet_code} is already running")
 
-    # fire-and-forget recorder; store task so we can await / cancel later
-    _session_tasks[meet_code] = asyncio.create_task(
-        facade.run_google_meet_recording_api(request.user_id, meet_code, request.meeting_language)
-    )
-    return {"status": "started", "meet_code": meet_code}
-
+        # fire-and-forget recorder; store task so we can await / cancel later
+        _session_tasks[meet_code] = asyncio.create_task(
+            facade.run_google_meet_recording_api(request.user_id, meet_code, request.meeting_language, ws_port, chat_port)
+        )
+        
+        # Добавляем поле ok для совместимости с frontend
+        return {
+            "ok": True,
+            "status": "started", 
+            "meet_code": meet_code, 
+            "ws_port": ws_port, 
+            "chat_port": chat_port
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Возвращаем ошибку в формате, который ожидает frontend
+        return {
+            "ok": False,
+            "error": str(e)
+        }
 
 @app.post("/terminate")
 async def terminate(meet_code: str = Body(..., embed=False)):

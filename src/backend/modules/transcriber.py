@@ -18,15 +18,24 @@ class Transcriber(BaseFacade):
         self.CHUNK_SIZE = 10_000
 
     async def transcribe(self, webm_file: str, return_segments: bool = False, language: str = None) -> str:
-        self.logger.info(f" Sending file {webm_file} to Whisper API...")
+        self.logger.info(f"Transcribing file: {webm_file}")
 
         async with aiofiles.open(webm_file, 'rb') as f:
             data = await f.read()
+        
         try:
             response = await self.audio_completion(webm_file, data, return_segments, language)
+            
+            # ЛОГИРУЕМ ЧТО ВЕРНУЛ WHISPER
+            self.logger.info(f"========== WHISPER RESPONSE ==========")
+            self.logger.info(f"File: {webm_file}")
+            self.logger.info(f"Response: {response}")
+            self.logger.info(f"=====================================")
+            
             return response
+            
         except Exception as e:
-            self.logger.error(f"❌ Whisper error: {e}")
+            self.logger.error(f"Whisper error: {e}")
             return ""
 
     async def match_transcript_speakers(self, real_time_transcript, afterwards_transcript):
@@ -37,10 +46,8 @@ class Transcriber(BaseFacade):
 
         len_tokens_1 = len(tokens_1)
         len_tokens_2 = len(tokens_2)
-        # print(f"Length of t1: {len_tokens_1}, of t2: {len_tokens_2}")
         proportion = len_tokens_1 / len_tokens_2
         num_chunk = len_tokens_2 // self.CHUNK_SIZE + 1
-        # print(f"Number of chunks is: {num_chunk}")
 
         proportion_chunk_size = int(self.CHUNK_SIZE * proportion)
 

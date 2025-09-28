@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Qontext Audio Transcriber (WebSocket Stream)",
+  "version": "2.0.0",
+  "description": "Real-time audio recorder with WebSocket streaming transcription",
+  "permissions": ["tabCapture", "offscreen", "storage", "scripting", "tabs"],
+  "host_permissions": ["http://127.0.0.1:8000/*", "ws://localhost:*/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["utils.js", "helper.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

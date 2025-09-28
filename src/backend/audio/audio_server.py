@@ -25,12 +25,19 @@ class AudioServer():
         self.processed_messages = set()
         self.db = DBFacade()
         self.logger = CustomLog()
+        self.last_restart_time = 0
+        self.CHUNK_INTERVAL = 10  # seconds
+        self._restart_ack_received = False
+        self.recording_started = False  # Track if we've started properly
 
     async def handler_whisper(self, ws, user_id, meet_id, meeting_language):
-        self.logger.info(" Whisper WebSocket connected")
+        self.logger.info("Whisper WebSocket connected")
         self.websocket = ws
         
         ping_task = asyncio.create_task(self.send_ping(ws))
+        chunk_processor_task = asyncio.create_task(self.chunk_processor(meeting_language))
+        
+        self.logger.info("Started ping and chunk processor tasks")
          
         try:
             async for message in ws:
@@ -40,30 +47,150 @@ class AudioServer():
                     await self._handle_json_message(message, meet_id)
         except websockets.exceptions.ConnectionClosed:
             self.logger.warning("Whisper WebSocket disconnected")
+        except Exception as e:
+            self.logger.error(f"Error in WebSocket handler: {e}")
         finally:
+            self.logger.info("Cancelling ping and chunk processor tasks")
             ping_task.cancel()
+            chunk_processor_task.cancel()
             with suppress(asyncio.CancelledError):
                 await ping_task
+                await chunk_processor_task
             self.logger.info("[FINALLY] Calling connection_closed.set()")
             self.connection_closed.set()
             self.logger.info("Connection_closed.set() closed")
 
-    async def _handle_audio_data(self, data, ws, meeting_language):
-        self.chunk_handler.add_data(data)
-        if self.chunk_handler.should_finalize():
-            webm_path, timestamp, chunk_start_time = self.chunk_handler.finalize()
-            if webm_path:
-                self.logger.info(f"The starting time of this chunk is: {chunk_start_time}")
-                asyncio.create_task(self.transcript_manager.transcribe_chunk(webm_path, timestamp, chunk_start_time, meeting_language))
-                self.speaker_tracker.save_buffer(timestamp)
-                await ws.send("restart-stream")
+    async def chunk_processor(self, meeting_language):
+        """Periodically processes accumulated audio data with MediaRecorder restart"""
+        self.logger.info(f"Chunk processor started, will process chunks every {self.CHUNK_INTERVAL} seconds")
+        
+        # Wait a bit for initial data to arrive
+        await asyncio.sleep(2)
+        
+        # Send initial restart to ensure clean start
+        if not self.recording_started and self.websocket:
+            self.logger.info("Sending initial restart command to ensure clean MediaRecorder start")
+            restart_command = json.dumps({
+                "type": "restart_recorder",
+                "timestamp": time.time() * 1000
+            })
+            try:
+                await self.websocket.send(restart_command)
+                restart_success = await self._wait_for_restart_ack()
+                if restart_success:
+                    # Discard any data collected before first restart
+                    self.chunk_handler.discard_current_buffer()
+                    self.recording_started = True
+                    self.logger.info("Initial restart successful, now collecting clean data")
+                else:
+                    self.logger.warning("Initial restart failed, data may be corrupted")
+            except Exception as e:
+                self.logger.error(f"Failed to send initial restart: {e}")
+        
+        try:
+            while not self.connection_closed.is_set():
+                # Wait for interval
+                await asyncio.sleep(self.CHUNK_INTERVAL)
+                
+                if self.connection_closed.is_set():
+                    break
+                
+                if not self.recording_started:
+                    self.logger.warning("Recording not properly started yet, skipping this cycle")
+                    continue
+                    
+                try:
+                    # Send restart command to frontend before processing chunk
+                    restart_success = False
+                    if self.websocket:
+                        restart_command = json.dumps({
+                            "type": "restart_recorder",
+                            "timestamp": time.time() * 1000
+                        })
+                        try:
+                            await self.websocket.send(restart_command)
+                            self.logger.info("Sent restart command to frontend")
+                            
+                            # Wait for restart acknowledgment from frontend
+                            restart_success = await self._wait_for_restart_ack()
+                            if not restart_success:
+                                self.logger.warning("Frontend restart acknowledgment timeout")
+                        except Exception as e:
+                            self.logger.error(f"Failed to send restart command: {e}")
+                    
+                    # Only process if restart was successful
+                    if restart_success and self.chunk_handler.has_valid_data():
+                        # Wait a bit more to ensure all final data arrives
+                        await asyncio.sleep(0.5)
+                        
+                        webm_path, timestamp, chunk_start_time = self.chunk_handler.finalize_chunk()
+                        if webm_path:
+                            self.logger.info(f"Processing chunk started at: {chunk_start_time}")
+                            # First save speakers, then start transcription
+                            self.speaker_tracker.save_buffer(timestamp)
+                            # Run processing asynchronously
+                            asyncio.create_task(
+                                self.transcript_manager.transcribe_chunk(
+                                    webm_path, timestamp, chunk_start_time, meeting_language
+                                )
+                            )
+                    elif not restart_success:
+                        self.logger.warning("Skipping chunk processing due to failed restart")
+                        # Discard potentially corrupted data
+                        self.chunk_handler.discard_current_buffer()
+                    else:
+                        self.logger.info("No valid audio data to process in this cycle")
+                        
+                except Exception as e:
+                    self.logger.error(f"Error in chunk processing cycle: {e}")
+                    await asyncio.sleep(1)
+                    
+        except asyncio.CancelledError:
+            self.logger.info("Chunk processor cancelled")
+            raise
+        except Exception as e:
+            self.logger.error(f"Fatal error in chunk processor: {e}")
+        finally:
+            self.logger.info("Chunk processor stopped")
+
+    async def _wait_for_restart_ack(self, timeout=5.0):
+        """Wait for restart acknowledgment from frontend"""
+        try:
+            self._restart_ack_received = False
+            start_time = time.time()
+            
+            while time.time() - start_time < timeout:
+                if self._restart_ack_received:
+                    self._restart_ack_received = False
+                    self.logger.info("Received restart acknowledgment from frontend")
+                    return True
                 await asyncio.sleep(0.1)
+                
+            self.logger.warning("Timeout waiting for restart acknowledgment")
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error waiting for restart ack: {e}")
+            return False
+
+    async def _handle_audio_data(self, data, ws, meeting_language):
+        """Accumulate audio data only if recording has started properly"""
+        if self.recording_started:
+            self.chunk_handler.add_data(data)
+        else:
+            # Discard data until we have a clean start
+            self.logger.info("Discarding audio data - recording not started properly yet")
 
     async def _handle_json_message(self, message, meet_id):
         try:
             data = json.loads(message)
             if "speakers" in data and "time" in data:
                 self.speaker_tracker.add_event(data)
+            elif data.get("type") == "restart_ready":
+                self._restart_ack_received = True
+                self.logger.info("Received restart acknowledgment from frontend")
+                # Mark that the next data will be from a clean restart
+                self.chunk_handler.mark_new_chunk_start()
         except Exception as e:
             self.logger.error(f"Error handling message: {e}")
     
@@ -91,7 +218,7 @@ class AudioServer():
                         msg_id = f"{msg['name']}_{msg['time']}_{msg['massage']}"
                         self.processed_messages.add(msg_id)
 
-                        if msg.get("massage") and msg.get("name") != "Вы":
+                        if msg.get("massage") and msg.get("name") != "You":
                             response = await self.chat_bot.process_real_time_meet_message(
                                 meet_id,
                                 msg.get("raw_time", datetime.now()),
@@ -142,11 +269,11 @@ class AudioServer():
         for component in [self.chunk_handler, self.transcript_manager, self.speaker_tracker]:
             component.set_paths(paths)
 
-        self.speaker_tracker.reset_speakers()
+        # Reset state for new session
+        self.recording_started = False
         self.transcript_manager.reset_transcript_buffer()
 
-        self.logger.info(f" Starting Whisper WebSocket server on port {ws_port}")
-        # self.chat_bot.uri = f"ws://localhost:{ws_port}"
+        self.logger.info(f"Starting Whisper WebSocket server on port {ws_port}")
         server = await websockets.serve(
             lambda ws: self.handler_whisper(ws, user_id, meet_id, meeting_language),
             "localhost",
@@ -160,30 +287,38 @@ class AudioServer():
         
         try:
             await self.connection_closed.wait()
-            self.logger.info("✅ Whisper session finished")
+            self.logger.info("Whisper session finished")
             await self._finalize_session(meeting_language, meet_id)
         finally:
             server.close()
             await server.wait_closed()
-            self.logger.info(" WebSocket server closed")
+            self.logger.info("WebSocket server closed")
 
     async def _finalize_session(self, meeting_language, meet_id):
-        if self.chunk_handler.has_data():
-            webm_path, timestamp, chunk_start_time = self.chunk_handler.finalize()
+        # Process any remaining data if we had a clean recording
+        if self.recording_started and self.chunk_handler.has_valid_data():
+            webm_path, timestamp, chunk_start_time = self.chunk_handler.finalize_chunk()
             if webm_path:
-                self.logger.info(f"The starting time of this chunk is: {chunk_start_time}")
+                self.logger.info(f"Processing final chunk started at: {chunk_start_time}")
                 await self.transcript_manager.transcribe_chunk(webm_path, timestamp, chunk_start_time, meeting_language)
                 self.speaker_tracker.save_buffer(timestamp)
 
         full_audio_path = self.transcript_manager.save_full()
         if not full_audio_path:
-            self.logger.info("The full_audio_path is empty!!!")
+            self.logger.error("Full audio path is None - no audio was recorded or merged")
+            return
+            
         self.speaker_tracker.save_timeline()
         self.logger.info(f"Finished saving timeline and the full_audio_path is: {full_audio_path}")
 
-        # Whisper does the whole transcript (with the roles)
-        if not os.path.exists(full_audio_path) or os.path.getsize(full_audio_path) < 1024:
-            self.logger.error(f"Skipping Whisper full transcription — file not found or too small: {full_audio_path}")
+        # Check if file exists and is valid before transcription
+        if not os.path.exists(full_audio_path):
+            self.logger.error(f"Full audio file does not exist: {full_audio_path}")
+            return
+            
+        file_size = os.path.getsize(full_audio_path)
+        if file_size < 1024:
+            self.logger.error(f"Full audio file too small ({file_size} bytes): {full_audio_path}")
             return
         
         speakers_list = self.speaker_tracker.get_unique_speakers()
@@ -204,32 +339,32 @@ class AudioServer():
         if self.websocket:
             try:
                 await self.websocket.send("terminate")
-                self.logger.info("📨 Sent 'terminate' message to websocket")
+                self.logger.info("Sent 'terminate' message to websocket")
             except Exception as e:
-                self.logger.warning(f"⚠️ Could not send terminate: {e}")
+                self.logger.warning(f"Could not send terminate: {e}")
 
             try:
                 await self.websocket.close()
-                self.logger.info("✅ WebSocket closed")
+                self.logger.info("WebSocket closed")
             except Exception as e:
-                self.logger.warning(f"⚠️ Could not close websocket: {e}")
+                self.logger.warning(f"Could not close websocket: {e}")
         else:
-            self.logger.warning("⚠️ No websocket to terminate")
+            self.logger.warning("No websocket to terminate")
         
         if getattr(self, "chat_ws", None):
             try:
                 await self.chat_ws.send(json.dumps({"type": "terminate"}))
-                self.logger.info("📨 Sent 'terminate' to chat websocket")
+                self.logger.info("Sent 'terminate' to chat websocket")
             except Exception as e:
-                self.logger.warning(f"⚠️ Could not send terminate to chat: {e}")
+                self.logger.warning(f"Could not send terminate to chat: {e}")
 
             try:
                 await self.chat_ws.close()
-                self.logger.info("✅ Chat websocket closed")
+                self.logger.info("Chat websocket closed")
             except Exception as e:
-                self.logger.warning(f"⚠️ Could not close chat websocket: {e}")
+                self.logger.warning(f"Could not close chat websocket: {e}")
         else:
-            self.logger.warning("⚠️ No chat websocket to terminate")
+            self.logger.warning("No chat websocket to terminate")
 
         self.connection_closed.set()
         

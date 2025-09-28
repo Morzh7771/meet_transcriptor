@@ -119,20 +119,31 @@ class TranscriptManager(BaseFacade):
                 print(f"The difference is bigger than 30 seconds:\nChunk_str_time = {chunk_start_time}\naudio_str_time = {self.audio_start_time}")
                 self.audio_start_time = chunk_start_time
 
+            # Проверяем размер файла перед транскрипцией
+            file_size = os.path.getsize(webm_path)
+            self.logger.info(f"WebM file size: {file_size} bytes")
+            
+            if file_size < 1024:  # Меньше 1KB
+                self.logger.warning(f"WebM file is too small: {file_size} bytes, skipping transcription")
+                return
+
             result = await self.transcriber.transcribe(webm_path, return_segments=True, language=language)
             text_lines = []
 
+            # Попытка прочитать файл спикеров с обработкой ошибки
             speaker_meta_path = os.path.join(self.paths["transcripts"],
                                 f"chunk_{timestamp}_speakers.json")
-            with open(speaker_meta_path, "r", encoding="utf-8") as f:
-                speaker_events = json.load(f)
+            speaker_events = []
+            try:
+                with open(speaker_meta_path, "r", encoding="utf-8") as f:
+                    speaker_events = json.load(f)
+            except FileNotFoundError:
+                self.logger.warning(f"Speaker file not found: {speaker_meta_path}. Proceeding without speaker info.")
+            except Exception as e:
+                self.logger.error(f"Error reading speaker file {speaker_meta_path}: {e}")
 
             speaker_ranges = self.get_speaker_ranges(speaker_events)
             self.logger.info(f"Speaker ranges are: {speaker_ranges}")
-
-            if not speaker_ranges:
-                self.logger.info("No active speakers in this chunk; skipping transcript append.")
-                return
 
             if isinstance(result, str):
                 try:
@@ -148,7 +159,13 @@ class TranscriptManager(BaseFacade):
                 seg_abs_end = chunk_start_time + seg["end"] * 1000
                 seg_rel_start = seg_starting_point + seg["start"]
                 seg_rel_end = seg_starting_point + seg["end"]
-                speaker = self.find_active_speaker(seg_abs_start, seg_abs_end, speaker_ranges)
+                
+                # Если есть спикеры - используем их, иначе "Unknown"
+                if speaker_ranges:
+                    speaker = self.find_active_speaker(seg_abs_start, seg_abs_end, speaker_ranges)
+                else:
+                    speaker = "Unknown"
+                    
                 if speaker:
                     start_h = int(seg_rel_start // 3600)
                     start_m = int((seg_rel_start % 3600) // 60)
@@ -162,8 +179,11 @@ class TranscriptManager(BaseFacade):
             full_text = "\n".join(text_lines)
             self.logger.info(f"The transcript is: {full_text}")
 
-            self.full_transcript_buffer.extend(text_lines)
-            # TODO: add slm for improving chunks quality
+            # Добавляем в буфер даже если нет спикеров
+            if text_lines:
+                self.full_transcript_buffer.extend(text_lines)
+            else:
+                self.logger.warning("No transcript lines generated for this chunk")
 
         except Exception as e:
             self.logger.error(f"Transcription error: {e}")
@@ -216,7 +236,14 @@ class TranscriptManager(BaseFacade):
 
             self.logger.info(f"✅ Full transcript saved to: {file_path}")
 
-            full_transcript = await self.transcriber.match_transcript_speakers("\n".join(self.full_transcript_buffer), full_transcript_raw)
+            # Проверяем есть ли данные в буфере
+            if not self.full_transcript_buffer:
+                self.logger.warning("Full transcript buffer is empty! Using raw transcript.")
+                buffer_text = full_transcript_raw
+            else:
+                buffer_text = "\n".join(self.full_transcript_buffer)
+
+            full_transcript = await self.transcriber.match_transcript_speakers(buffer_text, full_transcript_raw)
             full_transcript_text = "\n".join([f"{segment.speaker}: {segment.text}" for segment in full_transcript])
             self.logger.info(f"The full transcript returned from llm call is: {full_transcript_text}")
 
@@ -306,5 +333,3 @@ class TranscriptManager(BaseFacade):
         except subprocess.CalledProcessError as e:
             self.logger.error("❌ FFmpeg merge error:", e)
             return None
-
-
