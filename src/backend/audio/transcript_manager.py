@@ -28,6 +28,7 @@ class TranscriptManager(BaseFacade):
         self.router_agent = RouterAgent()
         self.last_chunks = []
         self.violation_callback = None
+        self.meet_id = None
 
     def set_violation_callback(self, callback):
         """
@@ -228,6 +229,14 @@ class TranscriptManager(BaseFacade):
                 self.full_transcript_buffer.extend(text_lines)
             else:
                 self.logger.warning("No transcript lines generated for this chunk")
+
+            if self.full_transcript_buffer and len(self.full_transcript_buffer) % 6 == 0:
+                try:
+                    cumulative_text = "\n".join(self.full_transcript_buffer)
+                    validation_result = self.router_agent.validate_chunk(cumulative_text, self.meet_id)
+                    self.logger.info(f"Scenario validation result: {validation_result}")
+                except Exception as e:
+                    self.logger.error(f"Error during scenario validation: {e}")
 
         except Exception as e:
             self.logger.error(f"Transcription error: {e}", exc_info=True)

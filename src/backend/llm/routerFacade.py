@@ -1,6 +1,10 @@
 from src.backend.models.llm_models import SlmResponse,llmResponse
 from src.backend.core.baseFacade import BaseFacade
 from src.backend.prompts.promptFacade import PromptFacade
+from src.backend.scenario_generator.scenarioFacade import ScenarioFacade
+from src.backend.db.dbFacade import DBFacade
+from typing import Dict, Any
+
 class RouterAgent(BaseFacade):
     """
     Router agent for analyzing conversation transcriptions.
@@ -19,6 +23,8 @@ class RouterAgent(BaseFacade):
         super().__init__()
         self.slm_model = slm_model  # Small model for quick checks
         self.llm_model = llm_model  # Large model for detailed analysis
+        self.scenario_facade = ScenarioFacade()
+        self.db = DBFacade()
 
     async def analyze_transcription(self, transcription_text: str):
         """
@@ -124,6 +130,44 @@ class RouterAgent(BaseFacade):
         except Exception as e:
             self.logger.error(f"Error in _analyze_with_llm: {e}", exc_info=True)
             raise
+
+    async def validate_chunk(self, chunk_text: str, meet_id: str) -> Dict[str, Any]:
+        try:
+            meeting = await self.db.get_meet(meet_id)
+            if not meeting or not meeting.scenario:
+                self.logger.info(f"No scenario found for meeting {meet_id}")
+                return {
+                    "has_deviation": False,
+                    "error": "No scenario found for this meeting"
+                }
+            
+            result_text = await self.scenario_facade.validate_chunk_against_scenario(
+                scenario=meeting.scenario,
+                chunk_text=chunk_text
+            )
+            
+            has_deviation = bool(result_text and result_text.strip())
+            
+            result = {
+                "has_deviation": has_deviation,
+                "deviation_details": result_text if has_deviation else None,
+                "meet_id": meet_id
+            }
+            
+            if has_deviation:
+                self.logger.warning(f"Scenario deviation detected in meeting {meet_id}: {result_text}")
+            else:
+                self.logger.debug(f"Consultant is following the scenario in meeting {meet_id}")
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Scenario validation error for meeting {meet_id}: {e}", exc_info=True)
+            return {
+                "has_deviation": False,
+                "error": str(e),
+                "meet_id": meet_id
+            }
 
     async def __call__(self, transcription_text: str):
         """
