@@ -26,7 +26,6 @@ class Transcriber(BaseFacade):
         try:
             response = await self.audio_completion(webm_file, data, return_segments, language)
             
-            # ЛОГИРУЕМ ЧТО ВЕРНУЛ WHISPER
             self.logger.info(f"========== WHISPER RESPONSE ==========")
             self.logger.info(f"File: {webm_file}")
             self.logger.info(f"Response: {response}")

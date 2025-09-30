@@ -12,19 +12,32 @@ from src.backend.core.baseFacade import BaseFacade
 from src.backend.db.dbFacade import DBFacade
 from src.backend.models.db_models import MeetUpdate
 from src.backend.modules.meetingAnalizer import MeetingAnalizer
+from src.backend.llm.routerFacade import RouterAgent
 
 class TranscriptManager(BaseFacade):
     def __init__(self):
         super().__init__()
         self.transcriber = Transcriber()
         self.db = DBFacade()
-        self.paths = None # this as well
-        self.full_transcript_buffer = None # What to do with this (musn't be a singleton)
+        self.paths = None
+        self.full_transcript_buffer = None
         self.MAX_CHUNK_DURATION_SEC = 290
         self.CHUNK_EXTENSION = ".webm"
         self.meeting_analizer = MeetingAnalizer()
         self.audio_start_time = None
+        self.router_agent = RouterAgent()
+        self.last_chunks = []
+        self.violation_callback = None
 
+    def set_violation_callback(self, callback):
+        """
+        Set callback function to send violation alerts.
+        
+        Args:
+            callback: Async function that accepts violation data dict
+        """
+        self.violation_callback = callback
+        
     def set_paths(self, paths):
         self.paths = paths
 
@@ -114,23 +127,21 @@ class TranscriptManager(BaseFacade):
         self.logger.info(f" Transcribing: {webm_path}")
         try:
             if not self.audio_start_time:
-                self.audio_start_time = chunk_start_time # set up the start time of the recording (wrong)
+                self.audio_start_time = chunk_start_time
             elif chunk_start_time - self.audio_start_time > 50_000:
                 print(f"The difference is bigger than 30 seconds:\nChunk_str_time = {chunk_start_time}\naudio_str_time = {self.audio_start_time}")
                 self.audio_start_time = chunk_start_time
 
-            # Проверяем размер файла перед транскрипцией
             file_size = os.path.getsize(webm_path)
             self.logger.info(f"WebM file size: {file_size} bytes")
             
-            if file_size < 1024:  # Меньше 1KB
+            if file_size < 1024:
                 self.logger.warning(f"WebM file is too small: {file_size} bytes, skipping transcription")
                 return
 
             result = await self.transcriber.transcribe(webm_path, return_segments=True, language=language)
             text_lines = []
 
-            # Попытка прочитать файл спикеров с обработкой ошибки
             speaker_meta_path = os.path.join(self.paths["transcripts"],
                                 f"chunk_{timestamp}_speakers.json")
             speaker_events = []
@@ -160,7 +171,6 @@ class TranscriptManager(BaseFacade):
                 seg_rel_start = seg_starting_point + seg["start"]
                 seg_rel_end = seg_starting_point + seg["end"]
                 
-                # Если есть спикеры - используем их, иначе "Unknown"
                 if speaker_ranges:
                     speaker = self.find_active_speaker(seg_abs_start, seg_abs_end, speaker_ranges)
                 else:
@@ -179,14 +189,48 @@ class TranscriptManager(BaseFacade):
             full_text = "\n".join(text_lines)
             self.logger.info(f"The transcript is: {full_text}")
 
-            # Добавляем в буфер даже если нет спикеров
+            chunks_to_analyze = self.last_chunks[-2:] + [full_text]
+            context_text = "\n\n".join(chunks_to_analyze)
+
+            self.logger.info("=== Before calling router_agent.analyze_transcription ===")
+            self.logger.info(f"Context text length: {len(context_text)}")
+            
+            analysis_result = await self.router_agent.analyze_transcription(context_text)
+            
+            self.logger.info("=== After calling router_agent.analyze_transcription ===")
+            self.logger.info(f"Analysis result type: {type(analysis_result)}")
+            self.logger.info(f"Analysis result value: {analysis_result}")
+            self.logger.info(f"Analysis result repr: {repr(analysis_result)}")
+
+            # If violation detected and callback is set, send alert to frontend
+            if analysis_result:
+                self.logger.info("Analysis result is not None, checking has_violation...")
+                self.logger.info(f"Attempting to get 'has_violation' key...")
+                
+                has_violation = analysis_result.get("has_violation")
+                self.logger.info(f"has_violation value: {has_violation}, type: {type(has_violation)}")
+                
+                if has_violation and self.violation_callback:
+                    self.logger.info("Violation detected and callback is set, preparing alert...")
+                    violation_alert = {
+                        "res": analysis_result
+                    }
+                    await self.violation_callback(violation_alert)
+                    self.logger.info("Violation detected and alert sent")
+            else:
+                self.logger.warning("Analysis result is None!")
+
+            self.last_chunks.append(full_text)
+            if len(self.last_chunks) > 2: 
+                self.last_chunks.pop(0)
+
             if text_lines:
                 self.full_transcript_buffer.extend(text_lines)
             else:
                 self.logger.warning("No transcript lines generated for this chunk")
 
         except Exception as e:
-            self.logger.error(f"Transcription error: {e}")
+            self.logger.error(f"Transcription error: {e}", exc_info=True)
 
     async def transcribe_and_save_full_recording(self, webm_path, language, meet_id, participants):
         if not webm_path or not os.path.exists(webm_path):
@@ -236,7 +280,6 @@ class TranscriptManager(BaseFacade):
 
             self.logger.info(f"✅ Full transcript saved to: {file_path}")
 
-            # Проверяем есть ли данные в буфере
             if not self.full_transcript_buffer:
                 self.logger.warning("Full transcript buffer is empty! Using raw transcript.")
                 buffer_text = full_transcript_raw
@@ -259,7 +302,7 @@ class TranscriptManager(BaseFacade):
             self.logger.info(f"The summary is: {summary}\nThe overview is: {overview}\nThe tags are: {tags}\nThe notes are: {notes}\nThe action_items are: {action_items}")
             
             await self.db.update_meet(meet_id, MeetUpdate(
-                transcript=full_transcript_text, 
+                trascription=full_transcript_text, 
                 overview="\n".join(overview),
                 summary=summary,
                 duration=math.ceil(duration_sec),

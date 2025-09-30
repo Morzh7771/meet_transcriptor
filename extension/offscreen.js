@@ -160,7 +160,8 @@ const startSession = async () => {
   try {
     const meetCode = getRoomIdFromUrl(config.room) || config.room;
     const requestBody = {
-      user_id: "8e840b8e-5bbc-40a5-8969-699e1c1cd6d6",
+      client_id: "d4dee85f-ebf7-46d3-a60f-a562d12bd328",
+      consultant_id: "68f997c0-95d5-4c88-b0c6-c5c13061ec2a",
       meet_code: meetCode,
       meeting_language: "ru"
     };

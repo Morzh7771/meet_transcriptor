@@ -13,7 +13,7 @@ class ConfigBase(BaseSettings):
     )
 
 class AccountConfig(ConfigBase):
-    ACC:str= Field(..., description="Email address of the qontext bot")
+    #ACC:str= Field(..., description="Email address of the qontext bot")
     EMAIL: str = Field(..., description="Email address of the qontext bot")
     PASSWORD: str = Field(..., description="Password of the qontext google account")
 
@@ -36,16 +36,28 @@ class DBConfig(ConfigBase):
     HOST: str
     ECHO: bool = False
 
+class VectorDBConfig(ConfigBase):
+    model_config = SettingsConfigDict(env_prefix="QDRANT_")
+    URL: str
+    API_KEY: SecretStr
+
+class LinkedinParserConfig(ConfigBase):
+    model_config = SettingsConfigDict(env_prefix="GENERECT_")
+    API_KEY: SecretStr
+
+class LawParserConfig(ConfigBase):
+    model_config = SettingsConfigDict(env_prefix="CONGRESS_")
+    API_KEY: SecretStr
 
 class Config(BaseSettings):
     openai: OpenAIConfig = Field(default_factory=OpenAIConfig)
     db: DBConfig = Field(default_factory=DBConfig)
+    vectordb: VectorDBConfig = Field(default_factory=VectorDBConfig)
+    linkedinparser: LinkedinParserConfig = Field(default_factory=LinkedinParserConfig)
+    lawparser: LawParserConfig = Field(default_factory=LawParserConfig)
     account: AccountConfig = Field(default_factory=AccountConfig)
     backend: BackendConfig = Field(default_factory=BackendConfig)
 
     @classmethod
     def load_config(cls) -> "Config":
         return cls()
-
-
-

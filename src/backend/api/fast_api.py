@@ -48,10 +48,9 @@ async def start(request: StartMeetingRequest):
 
         # fire-and-forget recorder; store task so we can await / cancel later
         _session_tasks[meet_code] = asyncio.create_task(
-            facade.run_google_meet_recording_api(request.user_id, meet_code, request.meeting_language, ws_port, chat_port)
+            facade.run_google_meet_recording_api(request.client_id, meet_code, request.meeting_language, ws_port, chat_port,request.consultant_id)
         )
         
-        # Добавляем поле ok для совместимости с frontend
         return {
             "ok": True,
             "status": "started", 

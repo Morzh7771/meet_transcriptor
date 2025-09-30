@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 class SpeakerUtterance(BaseModel):
     speaker: str
@@ -27,3 +27,21 @@ class NotesResponse(BaseModel):
 
 class ActionItemsResponse(BaseModel):
     action_items: str = Field(..., description="The action items list with people responsible for each task")
+    
+class SlmResponse(BaseModel):
+    has_violation: bool = Field(
+        description="True if legal violation detected, False if all clear"
+    )
+    chunk: Optional[str] = Field(
+        ...,
+        description="Excerpt from the transcript where the violation was noted"
+    )
+    law_disk: Optional[str] = Field(
+        ...,
+        description="Brief description of the violation"
+    )
+class llmResponse(BaseModel):
+    response: str = Field(
+        ...,
+        description="Detailed analysis of the violation with recommendations"
+    )

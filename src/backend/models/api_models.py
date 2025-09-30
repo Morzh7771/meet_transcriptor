@@ -2,9 +2,10 @@ from pydantic import BaseModel
 from typing import Optional
 
 class StartMeetingRequest(BaseModel):
-    user_id: str
+    client_id: str
     meet_code: str
     meeting_language: str
+    consultant_id: str
     
     
     

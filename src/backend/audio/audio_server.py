@@ -26,9 +26,10 @@ class AudioServer():
         self.db = DBFacade()
         self.logger = CustomLog()
         self.last_restart_time = 0
-        self.CHUNK_INTERVAL = 10  # seconds
+        self.CHUNK_INTERVAL = 10
         self._restart_ack_received = False
-        self.recording_started = False  # Track if we've started properly
+        self.recording_started = False
+        self.violations_ws = None  # WebSocket for sending violation alerts
 
     async def handler_whisper(self, ws, user_id, meet_id, meeting_language):
         self.logger.info("Whisper WebSocket connected")
@@ -240,28 +241,78 @@ class AudioServer():
             self.connection_closed.set()
             self.logger.info("Connection_closed.set() closed")
 
-    async def start(self, user_id, meet_code, meeting_language, ws_port, chat_port):
+    async def handle_violations_ws(self, ws, meet_id):
+        """
+        WebSocket handler for sending violation alerts to frontend.
+        Sends detailed analysis when law violations are detected.
+        """
+        self.logger.info("Violations WebSocket connected")
+        self.violations_ws = ws
+
+        ping_task = asyncio.create_task(self.send_ping(ws))
+
+        try:
+            async for message in ws:
+                if isinstance(message, str):
+                    try:
+                        data = json.loads(message)
+                        # Handle acknowledgments or status updates from frontend if needed
+                        if data.get("type") == "ack":
+                            self.logger.info(f"Received acknowledgment for violation: {data.get('violation_id')}")
+                    except json.JSONDecodeError:
+                        self.logger.warning("Received invalid JSON in violations channel")
+                        continue
+        except websockets.exceptions.ConnectionClosed:
+            self.logger.warning("Violations WebSocket disconnected")
+        finally:
+            ping_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await ping_task
+            self.logger.info("Violations WebSocket handler finished")
+            self.connection_closed.set()
+
+    async def send_violation_alert(self, violation_data: dict):
+        """
+        Send violation alert to frontend through WebSocket.
+        
+        Args:
+            violation_data: Dictionary containing violation details from RouterAgent
+        """
+        if not self.violations_ws:
+            self.logger.warning("Violations WebSocket not connected, cannot send alert")
+            return
+
+        try:
+            message = {
+                "type": "violation_detected",
+                "timestamp": time.time() * 1000,
+                "data": violation_data
+            }
+            await self.violations_ws.send(json.dumps(message))
+            self.logger.info("Violation alert sent to frontend")
+        except Exception as e:
+            self.logger.error(f"Failed to send violation alert: {e}")
+
+    async def start(self, user_id, meet_code, meeting_language, ws_port, violations_port, client_id):
         session_id = f"{meet_code}_{time.strftime('%Y-%m-%d_%H-%M-%S')}"
-        # TODO: save it in ak blob
         paths = {
             "audio": os.path.join("recordings", "audio", session_id),
             "transcripts": os.path.join("recordings", "transcripts", session_id),
             "full": os.path.join("recordings", "full", session_id)
         }
 
-        # Create meeting in db
         await self.db.create_tables()
 
         meet_id = await self.db.create_meet(MeetCreate(
-            user_id=user_id,
-            meet_code=meet_code,
+            client_id=user_id,
+            consultant_id=client_id,
             title="Test meet",
             date=datetime.now(),
             language=meeting_language,
             participants=[]
-            ))
+        ))
         
-        self.logger.info(f"The meeting is successfully created and meet_id is: {meet_id}")
+        self.logger.info(f"Meeting created successfully with meet_id: {meet_id}")
 
         for path in paths.values():
             os.makedirs(path, exist_ok=True)
@@ -269,7 +320,9 @@ class AudioServer():
         for component in [self.chunk_handler, self.transcript_manager, self.speaker_tracker]:
             component.set_paths(paths)
 
-        # Reset state for new session
+        # Pass audio_server reference to transcript_manager for violation callbacks
+        self.transcript_manager.set_violation_callback(self.send_violation_alert)
+
         self.recording_started = False
         self.transcript_manager.reset_transcript_buffer()
 
@@ -280,19 +333,24 @@ class AudioServer():
             ws_port
         )
 
-        chat_server = await websockets.serve(
-            lambda ws: self.handle_chat_ws(ws, meet_id),
-            "localhost", chat_port
+        violations_server = await websockets.serve(
+            lambda ws: self.handle_violations_ws(ws, meet_id),
+            "localhost",
+            violations_port
         )
         
         try:
             await self.connection_closed.wait()
-            self.logger.info("Whisper session finished")
+            self.logger.info("Session finished")
             await self._finalize_session(meeting_language, meet_id)
         finally:
             server.close()
             await server.wait_closed()
-            self.logger.info("WebSocket server closed")
+            violations_server.close()
+            await violations_server.wait_closed()
+            self.logger.info("WebSocket servers closed")
+
+    
 
     async def _finalize_session(self, meeting_language, meet_id):
         # Process any remaining data if we had a clean recording
@@ -339,7 +397,7 @@ class AudioServer():
         if self.websocket:
             try:
                 await self.websocket.send("terminate")
-                self.logger.info("Sent 'terminate' message to websocket")
+                self.logger.info("Sent terminate message to websocket")
             except Exception as e:
                 self.logger.warning(f"Could not send terminate: {e}")
 
@@ -348,23 +406,19 @@ class AudioServer():
                 self.logger.info("WebSocket closed")
             except Exception as e:
                 self.logger.warning(f"Could not close websocket: {e}")
-        else:
-            self.logger.warning("No websocket to terminate")
         
-        if getattr(self, "chat_ws", None):
+        if self.violations_ws:
             try:
-                await self.chat_ws.send(json.dumps({"type": "terminate"}))
-                self.logger.info("Sent 'terminate' to chat websocket")
+                await self.violations_ws.send(json.dumps({"type": "terminate"}))
+                self.logger.info("Sent terminate to violations websocket")
             except Exception as e:
-                self.logger.warning(f"Could not send terminate to chat: {e}")
+                self.logger.warning(f"Could not send terminate to violations websocket: {e}")
 
             try:
-                await self.chat_ws.close()
-                self.logger.info("Chat websocket closed")
+                await self.violations_ws.close()
+                self.logger.info("Violations websocket closed")
             except Exception as e:
-                self.logger.warning(f"Could not close chat websocket: {e}")
-        else:
-            self.logger.warning("No chat websocket to terminate")
+                self.logger.warning(f"Could not close violations websocket: {e}")
 
         self.connection_closed.set()
         
