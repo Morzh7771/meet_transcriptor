@@ -30,6 +30,8 @@ class AudioServer():
         self._restart_ack_received = False
         self.recording_started = False
         self.violations_ws = None  # WebSocket for sending violation alerts
+        self.client_id = None
+        self.consultant_id = None
 
     async def handler_whisper(self, ws, user_id, meet_id, meeting_language):
         self.logger.info("Whisper WebSocket connected")
@@ -132,7 +134,7 @@ class AudioServer():
                             # Run processing asynchronously
                             asyncio.create_task(
                                 self.transcript_manager.transcribe_chunk(
-                                    webm_path, timestamp, chunk_start_time, meeting_language
+                                    webm_path, timestamp, chunk_start_time, meeting_language, self.client_id, self.consultant_id
                                 )
                             )
                     elif not restart_success:
@@ -293,7 +295,7 @@ class AudioServer():
         except Exception as e:
             self.logger.error(f"Failed to send violation alert: {e}")
 
-    async def start(self, user_id, meet_code, meeting_language, ws_port, violations_port, client_id):
+    async def start(self, client_id, meet_code, meeting_language, ws_port, violations_port, consultant_id):
         session_id = f"{meet_code}_{time.strftime('%Y-%m-%d_%H-%M-%S')}"
         paths = {
             "audio": os.path.join("recordings", "audio", session_id),
@@ -303,9 +305,12 @@ class AudioServer():
 
         await self.db.create_tables()
 
+        self.client_id = client_id
+        self.consultant_id = consultant_id
+
         meet_id = await self.db.create_meet(MeetCreate(
-            client_id=user_id,
-            consultant_id=client_id,
+            client_id=client_id,
+            consultant_id=consultant_id,
             title="Test meet",
             date=datetime.now(),
             language=meeting_language,
@@ -328,7 +333,7 @@ class AudioServer():
 
         self.logger.info(f"Starting Whisper WebSocket server on port {ws_port}")
         server = await websockets.serve(
-            lambda ws: self.handler_whisper(ws, user_id, meet_id, meeting_language),
+            lambda ws: self.handler_whisper(ws, client_id, meet_id, meeting_language),
             "localhost",
             ws_port
         )

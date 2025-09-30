@@ -124,7 +124,7 @@ class TranscriptManager(BaseFacade):
         return best_speaker
 
 
-    async def transcribe_chunk(self, webm_path, timestamp, chunk_start_time, language):
+    async def transcribe_chunk(self, webm_path, timestamp, chunk_start_time, language, client_id, consultant_id):
         self.logger.info(f" Transcribing: {webm_path}")
         try:
             if not self.audio_start_time:
@@ -231,9 +231,18 @@ class TranscriptManager(BaseFacade):
                 self.logger.warning("No transcript lines generated for this chunk")
 
             if self.full_transcript_buffer and len(self.full_transcript_buffer) % 6 == 0:
+
+                meets = await self.db.get_meets(client_id=client_id, consultant_id=consultant_id)
+
+                if meets:
+                    last_meet = meets[0]
+                    scenario_to_use = last_meet.next_scenario
+                else:
+                    scenario_to_use = None
+
                 try:
                     cumulative_text = "\n".join(self.full_transcript_buffer)
-                    validation_result = self.router_agent.validate_chunk(cumulative_text, self.meet_id)
+                    validation_result = self.router_agent.validate_chunk(cumulative_text, scenario_to_use)
                     self.logger.info(f"Scenario validation result: {validation_result}")
                 except Exception as e:
                     self.logger.error(f"Error during scenario validation: {e}")
