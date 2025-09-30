@@ -351,6 +351,7 @@ class MeetCreate(BaseModel):
     language: str
     tags: Optional[str] = "No tags provided"
     participants: Optional[List[str]] = None
+    next_meet_scenario: Optional[str] = None
 
 class MeetUpdate(BaseModel):
     client_id: Optional[str] = None
@@ -366,6 +367,7 @@ class MeetUpdate(BaseModel):
     language: Optional[str] = None
     tags: Optional[str] = None
     participants: Optional[List[str]] = None
+    next_meet_scenario: Optional[str] = None
 
 class MeetResponse(BaseModel):
     id: str
@@ -382,6 +384,7 @@ class MeetResponse(BaseModel):
     language: str
     tags: str
     participants: List[str]
+    next_meet_scenario: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

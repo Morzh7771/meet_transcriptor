@@ -95,8 +95,8 @@ class ClientEmployment(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
     client_id: Mapped[str] = mapped_column(ForeignKey("client.id"), nullable=False)
-    company_name: Mapped[str] = mapped_column(String(50), nullable=False)
-    job_title: Mapped[str] = mapped_column(String(50), nullable=False)
+    company_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    job_title: Mapped[str] = mapped_column(String(100), nullable=False)
     job_description: Mapped[str] = mapped_column(Text, nullable=False)
     hire_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     pay_frequency: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -113,9 +113,9 @@ class ClientEducation(Base):
     client_id: Mapped[str] = mapped_column(ForeignKey("client.id"), nullable=False)
     started_on: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     ended_on: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    field_of_study: Mapped[str] = mapped_column(String(50), nullable=False)
-    degree: Mapped[str] = mapped_column(String(50), nullable=False)
-    university_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    field_of_study: Mapped[str] = mapped_column(String(100), nullable=False)
+    degree: Mapped[str] = mapped_column(String(100), nullable=False)
+    university_name: Mapped[str] = mapped_column(String(100), nullable=False)
 
     #clients = relationship("Client", back_populates="education")
 
@@ -193,6 +193,7 @@ class Meet(Base):
     language: Mapped[str] = mapped_column(String(50), nullable=False)
     tags: Mapped[str] = mapped_column(String(200), nullable=False)
     participants: Mapped[List[str]] = mapped_column(JSON, nullable=False)
+    next_meet_scenario: Mapped[str] = mapped_column(Text, nullable=False)
 
 class RealTimeMeetingMessage(Base):
     __tablename__ = 'real_time_meeting_message'

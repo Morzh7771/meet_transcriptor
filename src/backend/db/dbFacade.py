@@ -796,7 +796,8 @@ class DBFacade(BaseFacade):
                 trascription=meet_data.trascription,
                 language=meet_data.language,
                 tags=meet_data.tags,
-                participants=meet_data.participants
+                participants=meet_data.participants,
+                next_meet_scenario=meet_data.next_meet_scenario
             )
             session.add(meet)
             await session.commit()
@@ -821,6 +822,23 @@ class DBFacade(BaseFacade):
         """READ - Get all meetings for a specific consultant"""
         async with self.AsyncSessionLocal() as session:
             stmt = select(Meet).where(Meet.consultant_id == consultant_id)
+            result = await session.execute(stmt)
+            meets = result.scalars().all()
+            return [MeetResponse.model_validate(meet) for meet in meets]
+
+    async def get_meets(
+        self, client_id: Optional[str] = None, consultant_id: Optional[str] = None
+        ) -> List[MeetResponse]:
+        """READ - Get meetings filtered by client_id and/or consultant_id"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(Meet)
+            if client_id:
+                stmt = stmt.where(Meet.client_id == client_id)
+            if consultant_id:
+                stmt = stmt.where(Meet.consultant_id == consultant_id)
+
+            stmt = stmt.order_by(Meet.date.desc())
+
             result = await session.execute(stmt)
             meets = result.scalars().all()
             return [MeetResponse.model_validate(meet) for meet in meets]
