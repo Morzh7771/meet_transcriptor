@@ -9,6 +9,7 @@ from src.backend.core.baseFacade import BaseFacade
 from src.backend.modules.chatBot import ChatBot
 from src.backend.rag_db.ragFacade import RAGFacade
 from src.backend.vector_db.sql_to_vector import SQLQdrantSynchronizer
+
 class Facade(BaseFacade):
     def __init__(self):
         super().__init__()
@@ -19,9 +20,8 @@ class Facade(BaseFacade):
         self.session_done = asyncio.Event()
         self.chat_bot = ChatBot()
         self.rag_facade = RAGFacade()
+
         
-
-
     async def process_rag_chat(self, message: str, chat_id: str = None, user_id: str = None):
             chat_id = chat_id or str(uuid4())
             user_id = user_id or str(uuid4())

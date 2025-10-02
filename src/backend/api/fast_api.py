@@ -10,6 +10,8 @@ from pydantic import BaseModel
 from src.backend.db.dbFacade import DBFacade
 from src.backend.models.db_models import *
 from src.backend.scenario_generator.scenarioFacade import ScenarioFacade
+from src.backend.parser.linkedin_parser import LinkedInParser
+
 
 scenario_facade = ScenarioFacade()
 db_facade = DBFacade()
@@ -646,12 +648,13 @@ async def generate_scenario_for_user(request: ScenarioRequest):
 
 @app.post("/parse-linkedin", response_model=LinkedInParseResponse, tags=["LinkedIn"])
 async def parse_linkedin_profile(request: LinkedInParseRequest):
+    linkedin_parser = LinkedInParser(request.linkedin_url)
     try:
         client = await db_facade.get_client_by_id(request.client_id)
         if not client:
             raise HTTPException(status_code=404, detail=f"Client with ID {request.client_id} not found")
         
-        parsed_data = facade.linkedin_parser.parse_user(request.linkedin_url)
+        parsed_data = linkedin_parser.parse_user()
         
         employments_added = 0
         educations_added = 0
