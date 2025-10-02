@@ -9,7 +9,6 @@ from src.backend.core.baseFacade import BaseFacade
 from src.backend.modules.chatBot import ChatBot
 from src.backend.rag_db.ragFacade import RAGFacade
 from src.backend.vector_db.sql_to_vector import SQLQdrantSynchronizer
-from src.backend.vector_db.qdrant_manager import QdrantManager
 class Facade(BaseFacade):
     def __init__(self):
         super().__init__()
@@ -19,8 +18,6 @@ class Facade(BaseFacade):
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)
         self.session_done = asyncio.Event()
         self.chat_bot = ChatBot()
-        self.quadrant_manager = QdrantManager(self.configs.vectordb.URL, self.configs.vectordb.API_KEY.get_secret_value())
-        self.quadrant_manager.create_collection('meetings',1536)
         self.rag_facade = RAGFacade()
         
 
