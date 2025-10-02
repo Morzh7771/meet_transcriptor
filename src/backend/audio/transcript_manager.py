@@ -13,7 +13,8 @@ from src.backend.db.dbFacade import DBFacade
 from src.backend.models.db_models import MeetUpdate
 from src.backend.modules.meetingAnalizer import MeetingAnalizer
 from src.backend.llm.routerFacade import RouterAgent
-
+from src.backend.vector_db.qdrant_Facade import VectorDBFacade
+from src.backend.vector_db.sql_to_vector import SQLQdrantSynchronizer
 class TranscriptManager(BaseFacade):
     def __init__(self):
         super().__init__()
@@ -29,7 +30,8 @@ class TranscriptManager(BaseFacade):
         self.last_chunks = []
         self.violation_callback = None
         self.meet_id = None
-
+        self.vector_db = VectorDBFacade()
+        self.sql_to_vector = SQLQdrantSynchronizer()
     def set_violation_callback(self, callback):
         """
         Set callback function to send violation alerts.
@@ -327,7 +329,7 @@ class TranscriptManager(BaseFacade):
                 action_items=action_items,
                 participants=participants,
                 notes=notes))
-            
+            await self._sync_to_vector_db(meet_id) #JZ
             full_transcript_path = os.path.join(self.paths["full"], "full_final_transcript.txt")
             
             with open(full_transcript_path, "w", encoding="utf-8") as f:
@@ -356,7 +358,35 @@ class TranscriptManager(BaseFacade):
         self.save_full_transcript()
         output_file = self._merge_audio()
         return output_file
+    
+    async def _sync_to_vector_db(self, meet_id: str) -> bool: #JZ
 
+        try:
+            self.logger.info(f"🔄 Starting vector DB sync for meeting {meet_id}")
+            
+        
+            meeting_data = await self.db.get_meet_by_id(meet_id)
+            if not meeting_data:
+                self.logger.error(f"Meeting {meet_id} not found in SQL database")
+                return False
+       
+            if not meeting_data.trascription or meeting_data.trascription.strip() == "":
+                self.logger.warning(f"Meeting {meet_id} has no transcript, skipping vector sync")
+                return False
+     
+            if not meeting_data.duration or meeting_data.duration == 0:
+                self.logger.warning(f"Meeting {meet_id} has zero duration, skipping vector sync")
+                return False
+     
+            sync_stats = self.sql_to_vector.sync_meetings([meet_id])  
+            self.logger.info(f"Vector DB sync successful: Meeting ID: {meet_id};  Chunks added: {sync_stats['added']}")
+ 
+                
+        except Exception as e:
+            self.logger.error(f"❌ Vector DB sync failed for meeting {meet_id}: {e}")
+            self.logger.error(f"   Error type: {type(e).__name__}")
+            return False
+        
     def _save_transcript(self):
         file_path = os.path.join(self.paths["full"], "full_transcript.txt")
         transcript_files = sorted(glob(os.path.join(self.paths["transcripts"], "chunk_*.txt")))

@@ -12,8 +12,8 @@ if PROJECT_ROOT not in sys.path:
 
 from src.backend.db.dbFacade import DBFacade
 from src.backend.models.db_models import *  # personResponse, ClientResponse, etc.
-from src.backend.scenario_generator.vector_simillarity import ClientVectorSimilarity
 
+from src.backend.vector_db.qdrant_Facade import VectorDBFacade
 
 # -------- Data container -------------------------------------------------------
 
@@ -51,7 +51,9 @@ def _group_by(items: List[Any], key):
 class ClientDataReader:
     def __init__(self):
         self.db = DBFacade()
-        self.vector_similarity = ClientVectorSimilarity()
+        vector_db = VectorDBFacade()
+        self.vector_similarity = vector_db.client_profiles
+ 
 
     # ---------- Single client --------------------------------------------------
 

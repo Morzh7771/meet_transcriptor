@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import requests
 from typing import List, Dict
 from bs4 import BeautifulSoup,XMLParsedAsHTMLWarning
-from src.backend.law_parser.qdrant_manager import QdrantManager
+from src.backend.vector_db.qdrant_manager_law import QdrantManager
 import warnings
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)

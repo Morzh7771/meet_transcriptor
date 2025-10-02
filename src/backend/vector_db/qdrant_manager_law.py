@@ -1,20 +1,16 @@
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
-from src.backend.law_parser.chunker import create_chunks
-from src.backend.law_parser.vectorizer import TextVectorizer
+
+from src.backend.vector_db.chunker import create_chunks
+from src.backend.vector_db.vectorizer import TextVectorizer
 import uuid
 from src.backend.utils.configs import Config
 
 class QdrantManager:
     def __init__(self, collection_name: str = "laws"):
         self.configs = Config().load_config()
-        qdrant_url = self.configs.vectordb.URL
-        qdrant_api_key = self.configs.vectordb.API_KEY.get_secret_value()
-
-        self.client = QdrantClient(
-            url=qdrant_url,
-            api_key=qdrant_api_key,
-        )
+        
+        self.client = QdrantClient(url=self.configs.vectordb.URL)
         self.collection_name = collection_name
         self.vectorizer = TextVectorizer()
         self._create_collection()

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<DIV8 N="1.25A-0" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-26/section-1.25A-0&quot;,&quot;citation&quot;:&quot;26 CFR 1.25A-0&quot;}">
+<HEAD>Â§ 1.25A-0 Table of contents.</HEAD>
+<P>This section lists captions contained in Â§Â§ 1.25A-1, 1.25A-2, 1.25A-3, 1.25A-4, and 1.25A-5.</P>
+<EXTRACT>
+<HD2>Â§ 1.25A-1 Calculation of Education Tax Credit and General Eligibility Requirements
+</HD2>
+<P>(a) Amount of education tax credit.</P>
+<P>(b) Coordination of Hope Scholarship Credit and Lifetime Learning Credit.</P>
+<P>(1) In general.</P>
+<P>(2) Hope Scholarship Credit.</P>
+<P>(3) Lifetime Learning Credit.</P>
+<P>(4) Examples.</P>
+<P>(c) Limitation based on modified adjusted gross income.</P>
+<P>(1) In general.</P>
+<P>(2) Modified adjusted gross income defined.</P>
+<P>(3) Inflation adjustment.</P>
+<P>(d) Election.</P>
+<P>(e) Identification requirement.</P>
+<P>(f) Claiming the credit in the case of a dependent.</P>
+<P>(1) In general.</P>
+<P>(2) Examples.</P>
+<P>(g) Married taxpayers.</P>
+<P>(h) Nonresident alien taxpayers and dependents.</P>
+<HD2>Â§ 1.25A-2 Definitions
+</HD2>
+<P>(a) Claimed dependent.</P>
+<P>(b) Eligible educational institution.</P>
+<P>(1) In general.</P>
+<P>(2) Rules on Federal financial aid programs.</P>
+<P>(c) Academic period.</P>
+<P>(d) Qualified tuition and related expenses.</P>
+<P>(1) In general.</P>
+<P>(2) Required fees.</P>
+<P>(i) In general.</P>
+<P>(ii) Books, supplies, and equipment.</P>
+<P>(iii) Nonacademic fees.</P>
+<P>(3) Personal expenses.</P>
+<P>(4) Treatment of a comprehensive or bundled fee.</P>
+<P>(5) Hobby courses.</P>
+<P>(6) Examples.</P>
+<HD2>Â§ 1.25A-3 Hope Scholarship Credit
+</HD2>
+<P>(a) Amount of the credit.</P>
+<P>(1) In general.</P>
+<P>(2) Maximum credit.</P>
+<P>(b) Per student credit.</P>
+<P>(1) In general.</P>
+<P>(2) Example.</P>
+<P>(c) Credit allowed for only two taxable years.</P>
+<P>(d) Eligible student.</P>
+<P>(1) Eligible student defined.</P>
+<P>(i) Degree requirement.</P>
+<P>(ii) Work load requirement.</P>
+<P>(iii) Year of study requirement.</P>
+<P>(iv) No felony drug conviction.</P>
+<P>(2) Examples.</P>
+<P>(e) Academic period for prepayments.</P>
+<P>(1) In general.</P>
+<P>(2) Example.</P>
+<P>(f) Effective date.</P>
+<HD2>Â§ 1.25A-4 Lifetime Learning Credit
+</HD2>
+<P>(a) Amount of the credit.</P>
+<P>(1) Taxable years beginning before January 1, 2003.</P>
+<P>(2) Taxable years beginning after December 31, 2002.</P>
+<P>(3) Coordination with the Hope Scholarship Credit.</P>
+<P>(4) Examples.</P>
+<P>(b) Credit allowed for unlimited number of taxable years.</P>
+<P>(c) Both degree and nondegree courses are eligible for the credit.</P>
+<P>(1) In general.</P>
+<P>(2) Examples.</P>
+<P>(d) Effective date.</P>
+<HD2>Â§ 1.25A-5 Special Rules Relating to Characterization and Timing of Payments
+</HD2>
+<P>(a) Educational expenses paid by claimed dependent.</P>
+<P>(b) Educational expenses paid by a third party.</P>
+<P>(1) In general.</P>
+<P>(2) Special rule for tuition reduction included in gross income of employee.</P>
+<P>(3) Examples.</P>
+<P>(c) Adjustment to qualified tuition and related expenses for certain excludable educational assistance.</P>
+<P>(1) In general.</P>
+<P>(2) No adjustment for excludable educational assistance attributable to expenses paid in a prior year.</P>
+<P>(3) Scholarships and fellowship grants.</P>
+<P>(4) Examples.</P>
+<P>(d) No double benefit.</P>
+<P>(e) Timing rules.</P>
+<P>(1) In general.</P>
+<P>(2) Prepayment rule.</P>
+<P>(i) In general.</P>
+<P>(ii) Example.</P>
+<P>(3) Expenses paid with loan proceeds.</P>
+<P>(4) Expenses paid through third party installment payment plans.</P>
+<P>(i) In general.</P>
+<P>(ii) Example.</P>
+<P>(f) Refund of qualified tuition and related expenses.</P>
+<P>(1) Payment and refund of qualified tuition and related expenses in the same taxable year.</P>
+<P>(2) Payment of qualified tuition and related expenses in one taxable year and refund in subsequent taxable year before return filed for prior taxable year.</P>
+<P>(3) Payment of qualified tuition and related expenses in one taxable year and refund in subsequent taxable year.</P>
+<P>(i) In general.</P>
+<P>(ii) Recapture amount.</P>
+<P>(4) Refund of loan proceeds treated as refund of qualified tuition and related expenses.</P>
+<P>(5) Excludable educational assistance received in a subsequent taxable year treated as a refund.</P>
+<P>(6) Examples.</P></EXTRACT>
+<CITA TYPE="N">[T.D. 9034, 67 FR 78691, Dec. 26, 2002]
+</CITA>
+</DIV8>

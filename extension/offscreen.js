@@ -727,7 +727,7 @@ const startCapture = async (opts = {}) => {
     await startSession();
 
     console.log("[offscreen] Waiting 5s for backend to open WebSocket port");
-    await new Promise(r => setTimeout(r, 10000));
+    await new Promise(r => setTimeout(r, 20000));
 
     console.log("[offscreen] Connecting WebSocket");
     await connectWebSocket();

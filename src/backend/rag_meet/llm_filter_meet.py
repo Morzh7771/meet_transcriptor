@@ -9,12 +9,11 @@ from src.backend.prompts.promptFacade import PromptFacade
 class LLMFilter:
     def __init__(self, api_key: str, templates_dir: str = "prompts"):
         self.client = OpenAI(api_key=api_key)
-        # templates_dir параметр больше не нужен, так как PromptFacade сам находит директорию
-
+ 
     def extract_filters(self, user_query: str) -> Dict[str, Any]:
         """Extract filters from user query"""
         try:
-            # Используем PromptFacade вместо Jinja2 напрямую
+       
             prompt = PromptFacade.get_prompt(
                 "filter_rag_ch",
                 user_query=user_query,
@@ -40,7 +39,7 @@ class LLMFilter:
             return "No relevant results found for your query."
         
         try:
-            # Используем PromptFacade для второго промпта
+   
             chunks = self._prepare_chunks_for_template(search_results)
             prompt = PromptFacade.get_prompt(
                 "answer_rag_ch", 

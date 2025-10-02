@@ -1,12 +1,18 @@
 from typing import List, Dict
-from src.backend.law_parser.vectorizer import TextVectorizer
-from src.backend.law_parser.qdrant_manager import QdrantManager
+from src.backend.vector_db.vectorizer import TextVectorizer
+from src.backend.vector_db.qdrant_Facade import VectorDBFacade
 import os
 
 class SearchLawService:
-    def __init__(self):
+    def __init__(self, qdrant_manager=None):
         self.vectorizer = TextVectorizer()
-        self.qdrant = QdrantManager(collection_name="laws")
+        
+        if qdrant_manager:
+            self.qdrant = qdrant_manager
+        else:
+            vector_db = VectorDBFacade()
+            self.qdrant = vector_db.laws
+            
         self.collection_name = "laws"
     
     def search(self, query: str, limit: int = None) -> List[Dict]:

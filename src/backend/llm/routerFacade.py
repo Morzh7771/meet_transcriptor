@@ -4,7 +4,7 @@ from src.backend.prompts.promptFacade import PromptFacade
 from src.backend.scenario_generator.scenarioFacade import ScenarioFacade
 from src.backend.db.dbFacade import DBFacade
 from typing import Dict, Any
-from src.backend.law_rag.ragLawFacade import RAGFacade
+from src.backend.rag_law.ragLawFacade import LawRAGFacade
 
 class RouterAgent(BaseFacade):
     """
@@ -25,7 +25,7 @@ class RouterAgent(BaseFacade):
         self.slm_model = slm_model  # Small model for quick checks
         self.llm_model = llm_model  # Large model for detailed analysis
         self.scenario_facade = ScenarioFacade()
-        self.rag_facade = RAGFacade()
+        self.law_rag_facade = LawRAGFacade()
         self.db = DBFacade()
 
     async def analyze_transcription(self, transcription_text: str):
@@ -53,7 +53,7 @@ class RouterAgent(BaseFacade):
             
             # If violation detected - pass to large model
             if slm_response.has_violation:
-
+           
                 # Law RAG search
                 law_rag_response_chunk = await self._rag_search(slm_response.chunk, limits=1)
                 law_rag_response_disk = await self._rag_search(slm_response.law_disk, limits=1)
@@ -116,7 +116,7 @@ class RouterAgent(BaseFacade):
             self.logger.info("=== _rag_search started ===")
             self.logger.info(f"RAG query: {query}")
             
-            documents = self.rag_facade.search_laws(query, limits)
+            documents = self.law_rag_facade.search_laws(query, limits)
             combined_docs = "\n".join(documents)
             
             self.logger.info(f"RAG search returned {len(documents)} documents.")

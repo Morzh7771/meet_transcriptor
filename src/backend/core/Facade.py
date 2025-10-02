@@ -7,8 +7,9 @@ from src.backend.api.js_plagin_api import JsPluginApi
 from src.backend.audio.audio_server import AudioServer
 from src.backend.core.baseFacade import BaseFacade
 from src.backend.modules.chatBot import ChatBot
-from src.backend.rag_db.ragFacade import RAGFacade
+from src.backend.rag_meet.ragMeetFacade import MeetRAGFacade
 from src.backend.vector_db.sql_to_vector import SQLQdrantSynchronizer
+ 
 
 class Facade(BaseFacade):
     def __init__(self):
@@ -19,8 +20,8 @@ class Facade(BaseFacade):
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)
         self.session_done = asyncio.Event()
         self.chat_bot = ChatBot()
-        self.rag_facade = RAGFacade()
-
+        self.meet_rag_facade = MeetRAGFacade()
+        
         
     async def process_rag_chat(self, message: str, chat_id: str = None, user_id: str = None):
             chat_id = chat_id or str(uuid4())
@@ -28,7 +29,7 @@ class Facade(BaseFacade):
             try:
 
                 rag_result = await asyncio.to_thread(
-                    self.rag_facade.search_with_llm_filters, message)
+                    self.meet_rag_facade.search_with_llm_filters, message)
                 
                 # Extract response
                 response = {

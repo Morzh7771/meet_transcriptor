@@ -42,12 +42,16 @@ class DBConfig(ConfigBase):
     PORT: int
     HOST: str
     ECHO: bool = False
-
+    @property
+    def connection_url(self) -> str:
+        """Generate SQLAlchemy connection URL"""
+        return f"mysql+pymysql://{self.USER}:{self.PASSWORD.get_secret_value()}@{self.HOST}:{self.PORT}/{self.NAME}?charset=utf8mb4"
+    
 class VectorDBConfig(ConfigBase):
     model_config = SettingsConfigDict(env_prefix="QDRANT_")
     URL: str
     API_KEY: SecretStr
-
+    
 class LinkedinParserConfig(ConfigBase):
     model_config = SettingsConfigDict(env_prefix="GENERECT_")
     API_KEY: SecretStr

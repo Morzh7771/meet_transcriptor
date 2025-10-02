@@ -1,12 +1,14 @@
-from src.backend.rag_db.llm_filter import LLMFilter
-from src.backend.rag_db.search_service import SearchService
+from src.backend.vector_db.qdrant_Facade import VectorDBFacade
+from src.backend.rag_meet.llm_filter_meet import LLMFilter
+from src.backend.rag_meet.search_meet import SearchService
 from src.backend.utils.configs import Config   
 from typing import Dict, Any, List 
 
-class RAGFacade:
+class MeetRAGFacade:
     def __init__(self):
-        config = Config.load_config()   
-        self.search_service = SearchService()
+        config = Config.load_config()
+        vector_db = VectorDBFacade()
+        self.search_service = SearchService(vector_db.meetings)
         self.llm_filter = LLMFilter(config.openai.API_KEY.get_secret_value(), "prompts")
     
     def search_with_llm_filters(self, user_query: str, limit: int = None) -> Dict[str, Any]:

@@ -12,7 +12,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from law_parser.qdrant_manager import QdrantManager
+from src.backend.vector_db.qdrant_manager_law import QdrantManager
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 load_dotenv()

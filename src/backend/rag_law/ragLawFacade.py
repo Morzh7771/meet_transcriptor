@@ -1,12 +1,15 @@
 import os
 from typing import Dict, Any, List
+from src.backend.vector_db.qdrant_Facade import VectorDBFacade
+from src.backend.rag_law.llm_filter_law import LLMFilter
+from src.backend.rag_law.search_law import SearchLawService
+ 
+from src.backend.rag_law.search_law import SearchLawService
 
-from src.backend.law_rag.llm_filter import LLMFilter
-from src.backend.law_rag.search_law import SearchLawService
-
-class RAGFacade:
+class LawRAGFacade:
     def __init__(self):
-        self.search_law_service = SearchLawService()
+        vector_db = VectorDBFacade()
+        self.search_law_service = SearchLawService(vector_db.laws)
         
         current_dir = os.path.dirname(os.path.abspath(__file__))
         project_root = os.path.dirname(current_dir)   

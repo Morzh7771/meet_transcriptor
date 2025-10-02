@@ -11,15 +11,17 @@ from src.backend.db.dbFacade import DBFacade
 from src.backend.models.db_models import *
 from src.backend.scenario_generator.scenarioFacade import ScenarioFacade
 from src.backend.parser.linkedin_parser import LinkedInParser
-
+from src.backend.vector_db.qdrant_Facade import VectorDBFacade
 
 scenario_facade = ScenarioFacade()
 db_facade = DBFacade()
 facade = Facade()
-
+vector_db = VectorDBFacade()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    
     await db_facade.create_tables()
+    await vector_db.ensure_client_profiles_initialized()
     yield
     
 app = FastAPI(
@@ -41,7 +43,7 @@ app.add_middleware(
 # One Facade for the whole service.
 facade = Facade()
 db = DBFacade()
-
+vector_db = VectorDBFacade()
 # Keep track of recorder coroutines keyed by meet-code (or any session ID you prefer).
 _session_tasks: Dict[str, asyncio.Task] = {}
 

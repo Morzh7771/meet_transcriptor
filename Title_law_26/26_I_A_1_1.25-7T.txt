@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<DIV8 N="1.25-7T" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-26/section-1.25-7T&quot;,&quot;citation&quot;:&quot;26 CFR 1.25-7T&quot;}">
+<HEAD>Â§ 1.25-7T Public notice (Temporary).</HEAD>
+<P>(a) <I>In general.</I> At least 90 days prior to the issuance of any mortgage credit certificate under a qualified mortgage credit certificate program, the issuer shall provide reasonable public notice ofâ</P>
+<P>(1) The eligibility requirements for such certificate,</P>
+<P>(2) The methods by which such certificates are to be issued, and</P>
+<P>(3) The other information required by this section.</P>
+<P>(b) <I>Reasonable public notice</I>â(1) <I>In general.</I> Reasonable public notice means published notice which is reasonably designed to inform individuals who would be eligible to receive mortgage credit certificates of the proposed issuance. Reasonable public notice may be provided through newspapers of general circulation.</P>
+<P>(2) <I>Contents of notice.</I> The public notice required by paragraph (a) must include a brief description of the principal residence requirement, 3-year requirement, purchase price requirement, and new mortgage requirement. The notice must also provide a brief description of the methods by which the certificates are to be issued and the address and telephone number for obtaining further information.</P>
+<CITA TYPE="N">[T.D. 8023, 50 FR 19354, May 8, 1985]
+</CITA>
+</DIV8>

@@ -77,3 +77,15 @@ python3 main.py
 │       └── utils/
 │           └── logger.py               # Custom logger
 ```
+
+## Run docker-compose file to enable weaviate
+```bash
+    # Create directory for saving data
+    mkdir -p qdrant_storage
+
+    # activate containers
+    docker-compose up -d
+
+    # check status
+    docker-compose ps
+    ```

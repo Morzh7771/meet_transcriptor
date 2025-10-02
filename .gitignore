@@ -10,3 +10,4 @@ __pycache__/
 *.py[cod]
 *$py.class
 js/packege-lock.json
+qdrant_storage

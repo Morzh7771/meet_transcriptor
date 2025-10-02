@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<DIV8 N="1.25-8T" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-26/section-1.25-8T&quot;,&quot;citation&quot;:&quot;26 CFR 1.25-8T&quot;}">
+<HEAD>Â§ 1.25-8T Reporting requirements (Temporary).</HEAD>
+<P>(a) <I>Lender</I>â(1) <I>In general.</I> Each person who makes a loan that is a certified indebtedness amount with respect to any mortgage credit certificate must file the report described in paragraph (a)(2) and must retain on its books and records the information described in paragraph (a)(3). The report described in paragraph (a)(2) is an annual report and must be filed on or before January 31 of the year following the calendar year to which the report relates. See section 6709(c) and the regulations thereunder for the applicable penalties with respect to failure to file reports.</P>
+<P>(2) <I>Information required.</I> The report shall be submitted on Form 8329 and shall contain the information required therein. A separate Form 8329 shall be filed for each issue of mortgage credit certificates with respect to which the lender made mortgage loans during the preceding calendar year. Thus, for example, if during 1986 Bank M makes three mortgage loans which are certified indebtedness amounts with respect to State Z's January 15, 1986, issue of mortgage credit certificates, and two mortgage loans which are certified indebtedness amounts with respect to State Z's April 15, 1986, issue of mortgage credit certificates, and fifty mortgage loans which are certified indebtedness amounts with respect to County X's December 31, 1985, issue of mortgage credit certificates, Bank M must file three separate reports for calendar year 1986. The lender must submit the Form 8329 with the information required therein, includingâ</P>
+<P>(i) The name, address, and TIN of the issuer of the mortgage credit certificates,</P>
+<P>(ii) The date on which the election not to issue qualified mortgage bonds with respect to that mortgage credit certificate was made,</P>
+<P>(iii) The name, address, and TIN of the lender, and</P>
+<P>(iv) The sum of the products determined by multiplyingâ</P>
+<P>(A) The certified indebtedness amount of each mortgage credit certificate issued under such program, by</P>
+<P>(B) The certificate credit rate with respect to such certificate.</P>
+<P>(3) <I>Recordkeeping requirements.</I> Each person who makes a loan that is a certified indebtedness amount with respect to any mortgage credit certificate must retain the information specified in this paragraph (a)(3) on its books and records for 6 years following the year in which the loan was made. With respect to each loan the lender must retain the following information:</P>
+<P>(i) The name, address, and TIN of each holder of a qualified mortgage credit certificate with respect to which a loan is made,</P>
+<P>(ii) The name, address, and TIN of the issuer of such certificate, and</P>
+<P>(iii) The date the loan for the certified indebtedness amount is closed, the certified indebtedness amount, and the certificate credit rate of such certificate.</P>
+<P>(b) <I>Issuers</I>â(1) <I>In general.</I> Each issuer of mortgage credit certificates shall file the report described in paragraph (b)(2) of this section.</P>
+<P>(2) <I>Quarterly reports.</I> (i) Each issuer which elects to issue mortgage credit certificates shall file reports on Form 8330. These reports shall be filed on a quarterly basis, beginning with the quarter in which the election is made, and are due on the following dates: April 30 (for the quarter ending March 31), July 31 (for the quarter ending June 30), October 31 (for the quarter ending September 30), and January 31 (for the quarter ending December 31). For elections made prior to May 8, 1985, the first report need not be filed until July 31, 1985. An issuer shall file a separate report for each issue of mortgage credit certificates. In the quarter in which the last qualified mortgage credit certificate that may be issued under a program is issued, the issuer must state that fact on the report to be filed for that quarter; the issuer is not required to file any subsequent reports with respect to that program. See section 6709(c) for the penalties with respect to failure to file a report.</P>
+<P>(ii) The report shall be submitted on Form 8330 and shall contain the information required therein, includingâ</P>
+<P>(A) The name, address, and TIN of the issuer of the mortgage credit certificates,</P>
+<P>(B) The date of the issuer's election not to issue qualified mortgage bonds with respect to the mortgage credit certificate program and the nonissued bond amount of the program,</P>
+<P>(C) The sum of the products determined by multiplyingâ</P>
+<P>(<I>1</I>) The certified indebtedness amount of each qualified mortgage credit certificate issued under that program during the calendar quarter, by</P>
+<P>(<I>2</I>) The certificate credit rate with respect to such certificate, and</P>
+<P>(D) A listing of the name, address, and TIN of each holder of a qualified mortgage credit certificate which has been revoked during the calendar quarter.</P>
+<P>(c) <I>Extensions of time for filing reports.</I> The Commissioner may grant an extension of time for the filing of a report required by this section if there is reasonable cause for the failure to file such report in a timely fashion.</P>
+<P>(d) <I>Place for filing.</I> The reports required by this section are to be filed at the Internal Revenue Service Center, Philadelphia, Pennsylvania 19225.</P>
+<P>(e) <I>Cross reference.</I> See section 6709 and the regulations thereunder with respect to the penalty for failure to file a report required by this section.</P>
+<CITA TYPE="N">[T.D. 8023, 50 FR 19354, May 8, 1985]
+</CITA>
+</DIV8>

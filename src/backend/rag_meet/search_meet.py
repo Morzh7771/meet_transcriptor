@@ -1,16 +1,23 @@
 from typing import Dict, Any, List, Optional
 import re
 from datetime import datetime
+from src.backend.vector_db.qdrant_Facade import VectorDBFacade
 from src.backend.vector_db.vectorizer import TextVectorizer   
-from src.backend.vector_db.qdrant_manager import QdrantManager   
+from src.backend.vector_db.qdrant_manager_meetings import QdrantManager   
 from src.backend.utils.configs import Config   
 from rank_bm25 import BM25Okapi
 
 class SearchService:
-    def __init__(self):
-        config = Config.load_config()  # Use the same pattern as other files
+    def __init__(self, qdrant_manager=None):
+        config = Config.load_config()
         self.vectorizer = TextVectorizer()
-        self.qdrant = QdrantManager(config.vectordb.URL, config.vectordb.API_KEY.get_secret_value())
+        
+        if qdrant_manager:
+            self.qdrant = qdrant_manager
+        else:
+            vector_db = VectorDBFacade()
+            self.qdrant = vector_db.meetings
+            
         self.collection_name = "meetings"
         
         # Search configuration

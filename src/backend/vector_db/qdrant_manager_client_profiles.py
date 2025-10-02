@@ -13,12 +13,7 @@ from src.backend.utils.configs import Config
 class ClientVectorSimilarity:
     def __init__(self):
         self.configs = Config.load_config()
-        self.qdrant_client = QdrantClient(
-            # host=os.getenv("QDRANT_HOST", "localhost"),
-            # port=int(os.getenv("QDRANT_PORT", 6333)),
-            url=self.configs.vectordb.URL,
-            api_key=self.configs.vectordb.API_KEY.get_secret_value(),
-        )
+        self.qdrant_client = QdrantClient(url=self.configs.vectordb.URL)
         self.openai_client = OpenAI(api_key=self.configs.openai.API_KEY.get_secret_value())
         
         self.collection_name = "client_profiles"

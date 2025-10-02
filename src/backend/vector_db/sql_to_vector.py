@@ -19,14 +19,17 @@ class SQLQdrantSynchronizer:
     def __init__(self):
         self.config = Config()
         
-        # SQL connection using pydantic config
+        # SQL connection
         self.sql_engine = create_engine(self.config.db.connection_url, echo=False)
-        
-        # Qdrant connection using pydantic config
+        db_url = f"mysql+pymysql://{self.config.db.USER}:{self.config.db.PASSWORD.get_secret_value()}@{self.config.db.HOST}:{self.config.db.PORT}/{self.config.db.NAME}?charset=utf8mb4"
+        self.sql_engine = create_engine(db_url, echo=False)
+        # Qdrant connection
         qdrant_params = {
             "url": self.config.vectordb.URL,
             "timeout": 60
         }
+        
+ 
         
         self.qdrant_client = QdrantClient(**qdrant_params)
         

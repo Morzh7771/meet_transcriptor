@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<DIV8 N="1.24-1" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-26/section-1.24-1&quot;,&quot;citation&quot;:&quot;26 CFR 1.24-1&quot;}">
+<HEAD>Â§ 1.24-1 Partial credit allowed for certain other dependents.</HEAD>
+<P>(a) <I>In general.</I> For purposes of section 24(h)(4)(A), a taxpayer may be eligible to increase the credit determined under section 24(a) by $500 for a dependent of the taxpayer, as defined in section 152, other than a qualifying child described in section 24(c).</P>
+<P>(b) <I>Applicability date.</I> This section applies to taxable years beginning on or after October 13, 2020.</P>
+<CITA TYPE="N">[T.D. 9913, 85 FR 64385, Oct. 13, 2020]
+</CITA>
+</DIV8>

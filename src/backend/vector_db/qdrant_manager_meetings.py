@@ -35,9 +35,8 @@ def _is_datetime_key(key: str) -> bool:
 
 
 class QdrantManager:
- 
-    def __init__(self, url: str, api_key: str, timeout: int = 60) -> None:
-        self.client = QdrantClient(url=url, api_key=api_key, timeout=timeout)
+    def __init__(self, url: str, timeout: int = 60) -> None:
+        self.client = QdrantClient(url=url, timeout=timeout)
  
 
     def create_collection(self, collection_name: str, vector_size: int) -> None:

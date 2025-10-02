@@ -1,5 +1,8 @@
 from typing import List
 
+ 
+ 
+
 def create_chunks(text: str, max_words: int = 400, overlap_words: int = 100) -> List[str]:
     """Split text into overlapping chunks by lines"""
     if not text.strip():
@@ -29,7 +32,7 @@ def create_chunks(text: str, max_words: int = 400, overlap_words: int = 100) -> 
         
         # Calculate overlap for next chunk
         if i < len(lines):
-            overlap_line_count = min(len(chunk_lines), 3)   
+            overlap_line_count = min(len(chunk_lines), 3)  # Simple overlap strategy
             i -= overlap_line_count
     
     return chunks
