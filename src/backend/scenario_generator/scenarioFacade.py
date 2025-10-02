@@ -7,6 +7,7 @@ from src.backend.scenario_generator.datascrapper import ClientDataReader, FullCl
 from src.backend.prompts.promptFacade import PromptFacade
 from src.backend.utils.configs import Config
 
+
 class ScenarioFacade:
     def __init__(self):
         self.configs = Config().load_config()

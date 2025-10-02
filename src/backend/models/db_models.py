@@ -351,7 +351,7 @@ class MeetCreate(BaseModel):
     language: str
     tags: Optional[str] = "No tags provided"
     participants: Optional[List[str]] = None
-    next_meet_scenario: Optional[str] = None
+    next_meet_scenario: Optional[str] = ""
 
 class MeetUpdate(BaseModel):
     client_id: Optional[str] = None
@@ -451,3 +451,26 @@ class AllChatbotMeetingMessageResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class FrontMessageCreate(BaseModel):
+    chat_id: str
+    meet_id: str
+    content: str
+    time: datetime 
+    role: str
+
+class FrontMessageUpdate(BaseModel):
+    chat_id: Optional[str] = None
+    meet_id: Optional[str] = None
+    content: Optional[str] = None
+    time: Optional[datetime] = None
+    role: Optional[str] = None
+
+class FrontMessageResponse(BaseModel):
+    id: str
+    chat_id: str
+    meet_id: str
+    content: str
+    time: datetime
+    role: str
+    
+    model_config = ConfigDict(from_attributes=True)

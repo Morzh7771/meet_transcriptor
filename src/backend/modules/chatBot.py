@@ -34,9 +34,8 @@ class ChatBot(BaseFacade):
     async def process_meet_questions(self, chat_id, meet_id, message):
         dt = datetime.now()
         meet = await self.db_facade.get_meet_by_id(meet_id)
-        meeting_transcript = meet.model_dump().get("transcript")
-        
-        prompt_template = PromptFacade.get_prompt("chat", user_query=message, meeting_transcript=meeting_transcript)
+
+        prompt_template = PromptFacade.get_prompt("chat", user_query=message, meeting=meet)
         prompt = eval(prompt_template)
 
         
@@ -45,6 +44,6 @@ class ChatBot(BaseFacade):
 
         await self.history.add_user_message_front(chat_id, meet_id, dt - timedelta(minutes=1), prompt[1]["content"]["text"])
         
-        router_response = await self.router(await self.history.get_history_front(chat_id))
+        router_response = await self.router.front_chat(await self.history.get_history_front(chat_id))
         await self.history.add_assistant_message_front(chat_id, meet_id, dt, router_response.output)
         return await self.history.get_history_front(chat_id)

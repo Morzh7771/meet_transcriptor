@@ -1,37 +1,47 @@
 -------------
-name: notes
-description: prompt to create notes for the transcript
-author: Sofiia Sampara
+name: action_items
+description: Extract product names mentioned in summary text
+author: George Zatulovsky
 version: 1.0
 -------------
 [
-    {
-        "role": "system",
-        "content": {
-            "type": "text",
-            "text": """
-            You are an assistant that extracts action items from meeting transcripts.
+  {
+    "role": "system",
+    "content": {
+      "type": "text",
+      "text": """
+        You extract company product names from a financial meeting summary.
 
-            Your task:
-            Read the meeting transcript.
-            Identify specific tasks or follow-ups that were assigned or agreed upon.
-            Organize the content into sections by name of the person responsible for the task, styled as a bold heading.
-            For each action item, include task descriptions (concise, imperative form) in a form of list
-            If no clear deadline was mentioned, omit it. If a time reference was mentioned (e.g., “by tomorrow”), include it.
-            Write the response in the same language as the meeting transcript content.
-            """
-        }
-    },
-    {
-        "role": "user",
-        "content": {
-            "type": "text",
-            "text": """
-            Meeting transcript:
-            {% for line in meeting_transcript %}
-                {{ line }}
-            {% endfor %}
-            """
-        }
+        Inputs:
+        - products: a list of canonical product names (exact spellings to output)
+        - summary: the meeting summary text
+
+        Task:
+        1) Read the summary.
+        2) Detect products that were explicitly mentioned or discussed.
+        3) If the summary uses a synonym/variant (e.g., "Whole Life Insurance" for "Life Insurance Whole"),
+        map it to the exact canonical name from 'products'. Only map when highly confident.
+        4) Output ONLY names that exist in 'products', deduplicated, in order of first mention.
+
+        Output format:
+        Comma-separated string of canonical names with NO extra words or quotes.
+        If nothing matches, return an empty string.
+        """
     }
+  },
+  {
+    "role": "user",
+    "content": {
+      "type": "text",
+      "text": """
+        products:
+        {% for n in products -%}
+        - {{ n }}
+        {%- endfor %}
+
+        summary:
+        {{ summary | default('') }}
+        """
+    }
+  }
 ]

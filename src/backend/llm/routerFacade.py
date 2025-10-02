@@ -1,9 +1,10 @@
-from src.backend.models.llm_models import SlmResponse,llmResponse
+from src.backend.models.llm_models import SlmResponse,llmResponse,RouterResponse
 from src.backend.core.baseFacade import BaseFacade
 from src.backend.prompts.promptFacade import PromptFacade
 from src.backend.scenario_generator.scenarioFacade import ScenarioFacade
 from src.backend.db.dbFacade import DBFacade
 from typing import Dict, Any
+from src.backend.law_rag.ragLawFacade import RAGFacade
 
 class RouterAgent(BaseFacade):
     """
@@ -19,11 +20,12 @@ class RouterAgent(BaseFacade):
             cls._instance = super(RouterAgent, cls).__new__(cls, *args, **kwargs)
         return cls._instance
 
-    def __init__(self, slm_model="gpt-4o-mini", llm_model="gpt-5-2025-08-07"):
+    def __init__(self, slm_model="gpt-4o-mini", llm_model="gpt-4.1"):
         super().__init__()
         self.slm_model = slm_model  # Small model for quick checks
         self.llm_model = llm_model  # Large model for detailed analysis
         self.scenario_facade = ScenarioFacade()
+        self.rag_facade = RAGFacade()
         self.db = DBFacade()
 
     async def analyze_transcription(self, transcription_text: str):
@@ -45,14 +47,20 @@ class RouterAgent(BaseFacade):
             slm_response = await self._check_with_slm(transcription_text)
             
             self.logger.info(f"SLM Response type: {type(slm_response)}")
-            self.logger.info(f"SLM Response: {slm_response}")
+            #self.logger.info(f"SLM Response: {slm_response}")
             self.logger.info(f"SLM has_violation type: {type(slm_response.has_violation)}")
             self.logger.info(f"SLM has_violation value: {slm_response.has_violation}")
             
             # If violation detected - pass to large model
             if slm_response.has_violation:
+
+                # Law RAG search
+                law_rag_response_chunk = await self._rag_search(slm_response.chunk, limits=1)
+                law_rag_response_disk = await self._rag_search(slm_response.law_disk, limits=1)
+                law_rag_response = "\n".join([law_rag_response_chunk, law_rag_response_disk])
+
                 self.logger.info("Violation detected, calling LLM for detailed analysis...")
-                detailed_analysis = await self._analyze_with_llm(transcription_text, slm_response)
+                detailed_analysis = await self._analyze_with_llm(transcription_text, slm_response, law_rag_response)
                 self.logger.info(f"LLM Response type: {type(detailed_analysis)}")
                 self.logger.info(f"LLM Response: {detailed_analysis}")
                 
@@ -84,7 +92,7 @@ class RouterAgent(BaseFacade):
         """
         try:
             self.logger.info("=== _check_with_slm started ===")
-            slm_prompt_template = eval(PromptFacade.get_prompt("slm_teamplate", transcription_text=transcription_text))
+            slm_prompt_template = eval(PromptFacade.get_prompt("slm_template", transcription_text=transcription_text))
             self.logger.info(f"SLM prompt prepared, calling API...")
             
             response = await self.client.chat.completions.create(
@@ -100,20 +108,39 @@ class RouterAgent(BaseFacade):
             self.logger.error(f"Error in _check_with_slm: {e}", exc_info=True)
             raise
 
-    async def _analyze_with_llm(self, transcription_text: str, slm_response: SlmResponse):
+    async def _rag_search(self, query: str, limits: int) -> str:
+        """
+        Perform a RAG search to retrieve relevant legal information.
+        """
+        try:
+            self.logger.info("=== _rag_search started ===")
+            self.logger.info(f"RAG query: {query}")
+            
+            documents = self.rag_facade.search_laws(query, limits)
+            combined_docs = "\n".join(documents)
+            
+            self.logger.info(f"RAG search returned {len(documents)} documents.")
+            return combined_docs
+            
+        except Exception as e:
+            self.logger.error(f"Error in _rag_search: {e}", exc_info=True)
+            return ""
+
+    async def _analyze_with_llm(self, transcription_text: str, slm_response: SlmResponse, law_rag_response: str) -> llmResponse:
         """
         Detailed analysis with large model when violation is detected.
         """
         try:
             self.logger.info("=== _analyze_with_llm started ===")
             self.logger.info(f"SLM Response chunk: {slm_response.chunk}")
-            self.logger.info(f"SLM Response law_desc: {slm_response.law_desc}")
+            self.logger.info(f"SLM Response law_desc: {slm_response.law_disk}")
             
             llm_prompt_template = eval(PromptFacade.get_prompt(
                 "llm_template", 
                 transcription_text=transcription_text,
                 chunk=slm_response.chunk,
-                law_desc=slm_response.law_desc
+                law_desc=slm_response.law_disk,
+                law_rag=law_rag_response
             ))
             
             self.logger.info(f"LLM prompt prepared, calling API...")
@@ -125,24 +152,18 @@ class RouterAgent(BaseFacade):
             )
             
             self.logger.info(f"LLM API response received: {response}")
+
             return response
             
         except Exception as e:
             self.logger.error(f"Error in _analyze_with_llm: {e}", exc_info=True)
             raise
 
-    async def validate_chunk(self, chunk_text: str, meet_id: str) -> Dict[str, Any]:
+    async def validate_chunk(self, chunk_text: str, scenario: str) -> Dict[str, Any]:
         try:
-            meeting = await self.db.get_meet(meet_id)
-            if not meeting or not meeting.scenario:
-                self.logger.info(f"No scenario found for meeting {meet_id}")
-                return {
-                    "has_deviation": False,
-                    "error": "No scenario found for this meeting"
-                }
             
             result_text = await self.scenario_facade.validate_chunk_against_scenario(
-                scenario=meeting.scenario,
+                scenario=scenario,
                 chunk_text=chunk_text
             )
             
@@ -151,22 +172,20 @@ class RouterAgent(BaseFacade):
             result = {
                 "has_deviation": has_deviation,
                 "deviation_details": result_text if has_deviation else None,
-                "meet_id": meet_id
             }
             
             if has_deviation:
-                self.logger.warning(f"Scenario deviation detected in meeting {meet_id}: {result_text}")
+                self.logger.warning(f"Scenario deviation detected: {result_text}")
             else:
-                self.logger.debug(f"Consultant is following the scenario in meeting {meet_id}")
+                self.logger.debug(f"Consultant is following the scenario in meeting")
             
             return result
             
         except Exception as e:
-            self.logger.error(f"Scenario validation error for meeting {meet_id}: {e}", exc_info=True)
+            self.logger.error(f"Scenario validation error for meeting: {e}", exc_info=True)
             return {
                 "has_deviation": False,
                 "error": str(e),
-                "meet_id": meet_id
             }
 
     async def __call__(self, transcription_text: str):
@@ -175,3 +194,13 @@ class RouterAgent(BaseFacade):
         Backward compatibility with previous version.
         """
         return await self.analyze_transcription(transcription_text)
+    
+    async def front_chat(self, chat_history, model="gpt-5-2025-08-07"):
+
+        response = await self.client.chat.completions.create(
+            model = model,
+            messages = chat_history,
+            response_model=RouterResponse
+        )
+
+        return response

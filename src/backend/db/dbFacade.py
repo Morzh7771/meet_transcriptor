@@ -614,6 +614,27 @@ class DBFacade(BaseFacade):
     
     # ============ COMPANY OPERATIONS ============
 
+    async def get_products_by_company_id(self, company_id: str) -> List[ProductResponse]:
+        """READ - Get all products for a specific company"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(Product).where(Product.company_id == company_id)
+            result = await session.execute(stmt)
+            products = result.scalars().all()
+            return [ProductResponse.model_validate(product) for product in products]
+
+    async def get_company_products_by_consultant_id(self, consultant_id: str) -> List[ProductResponse]:
+        """Get all products of the company that the consultant belongs to"""
+        # Получаем консультанта
+        consultant = await self.get_consultant_by_id(consultant_id)
+        
+        if not consultant:
+            return []
+        
+        # Получаем все продукты компании консультанта
+        products = await self.get_products_by_company_id(consultant.company_id)
+        
+        return products
+
     async def create_company(self, company_data: CompanyCreate) -> CompanyResponse:
         """CREATE - Insert new company"""
         async with self.AsyncSessionLocal() as session:
@@ -1112,3 +1133,197 @@ class DBFacade(BaseFacade):
         """Check if all chatbot meeting message exists"""
         message = await self.get_all_chatbot_meeting_message_by_id(message_id)
         return True if message else False
+    
+
+    # ============ GET BY CLIENT_ID OPERATIONS ============
+
+    async def get_persons_by_client_id(self, client_id: str) -> List[personResponse]:
+        """READ - Get all persons for a specific client"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(Person).where(Person.client_id == client_id)
+            result = await session.execute(stmt)
+            persons = result.scalars().all()
+            return [personResponse.model_validate(person) for person in persons]
+
+    async def get_client_educations_by_client_id(self, client_id: str) -> List[ClientEducationResponse]:
+        """READ - Get all educations for a specific client"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(ClientEducation).where(ClientEducation.client_id == client_id)
+            result = await session.execute(stmt)
+            educations = result.scalars().all()
+            return [ClientEducationResponse.model_validate(edu) for edu in educations]
+
+    async def get_client_employments_by_client_id(self, client_id: str) -> List[ClientEmploymentResponse]:
+        """READ - Get all employments for a specific client"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(ClientEmployment).where(ClientEmployment.client_id == client_id)
+            result = await session.execute(stmt)
+            employments = result.scalars().all()
+            return [ClientEmploymentResponse.model_validate(emp) for emp in employments]
+
+    async def get_beneficiaries_by_client_id(self, client_id: str) -> List[BeneficiaryResponse]:
+        """READ - Get all beneficiaries for a specific client"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(Beneficiary).where(Beneficiary.client_id == client_id)
+            result = await session.execute(stmt)
+            beneficiaries = result.scalars().all()
+            return [BeneficiaryResponse.model_validate(ben) for ben in beneficiaries]
+
+    async def get_plans_by_client_id(self, client_id: str) -> List[PlanResponse]:
+        """READ - Get all plans for a specific client"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(Plan).where(Plan.client_id == client_id)
+            result = await session.execute(stmt)
+            plans = result.scalars().all()
+            return [PlanResponse.model_validate(plan) for plan in plans]
+
+    async def get_person_addresses_by_person_id(self, person_id: str) -> List[PersonAddressResponse]:
+        """READ - Get all addresses for a specific person"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(PersonAddress).where(PersonAddress.person_id == person_id)
+            result = await session.execute(stmt)
+            addresses = result.scalars().all()
+            return [PersonAddressResponse.model_validate(addr) for addr in addresses]
+
+    async def get_person_addresses_by_client_id(self, client_id: str) -> List[PersonAddressResponse]:
+        """READ - Get all addresses for all persons of a specific client"""
+        async with self.AsyncSessionLocal() as session:
+    
+            persons_stmt = select(Person).where(Person.client_id == client_id)
+            persons_result = await session.execute(persons_stmt)
+            persons = persons_result.scalars().all()
+            
+    
+            person_ids = [person.id for person in persons]
+            
+            if not person_ids:
+                return []
+    
+            addresses_stmt = select(PersonAddress).where(PersonAddress.person_id.in_(person_ids))
+            addresses_result = await session.execute(addresses_stmt)
+            addresses = addresses_result.scalars().all()
+            
+            return [PersonAddressResponse.model_validate(addr) for addr in addresses]
+
+    async def get_client_full_info(self, client_id: str) -> Optional[dict]:
+        """
+        READ - Get complete information about a client including all related data
+    
+        """
+    
+        client = await self.get_client_by_id(client_id)
+        if not client:
+            return None
+        
+    
+        persons = await self.get_persons_by_client_id(client_id)
+        educations = await self.get_client_educations_by_client_id(client_id)
+        employments = await self.get_client_employments_by_client_id(client_id)
+        beneficiaries = await self.get_beneficiaries_by_client_id(client_id)
+        plans = await self.get_plans_by_client_id(client_id)
+        addresses = await self.get_person_addresses_by_client_id(client_id)
+        
+        return {
+            "client": client,
+            "persons": persons,
+            "educations": educations,
+            "employments": employments,
+            "beneficiaries": beneficiaries,
+            "plans": plans,
+            "addresses": addresses
+        }
+
+    async def get_meets_by_client_id(self, client_id: str) -> List[MeetResponse]:
+        """READ - Get all meetings for a specific client"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(Meet).where(Meet.client_id == client_id)
+            result = await session.execute(stmt)
+            meets = result.scalars().all()
+            return [MeetResponse.model_validate(meet) for meet in meets]
+            
+    # ============ MEET HELPER OPERATIONS ============
+
+    async def get_client_id_by_meet_id(self, meet_id: str) -> Optional[str]:
+        """READ - Get client_id associated with a meeting"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(Meet.client_id).where(Meet.id == meet_id)
+            result = await session.execute(stmt)
+            client_id = result.scalar_one_or_none()
+            return client_id
+
+    async def get_consultant_id_by_meet_id(self, meet_id: str) -> Optional[str]:
+        """READ - Get consultant_id associated with a meeting"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(Meet.consultant_id).where(Meet.id == meet_id)
+            result = await session.execute(stmt)
+            consultant_id = result.scalar_one_or_none()
+            return consultant_id
+    # ============ Front End chat bot in meet list ============
+
+    async def create_front_chat_massage(self, chat_data: "FrontMessageCreate") -> "FrontMessageCreate":
+        """CREATE - Insert new meeting chat message"""
+        async with self.AsyncSessionLocal() as session:
+            chat_message = FrontMessage(
+                chat_id=chat_data.chat_id,
+                meet_id=chat_data.meet_id,
+                time=chat_data.time,
+                role=chat_data.role,
+                content=chat_data.content
+            )
+            session.add(chat_message)
+            await session.commit()
+            await session.refresh(chat_message)
+            return FrontMessageResponse.model_validate(chat_message)
+
+    async def get_front_chat_message_by_id(self, chat_id: str) -> Optional["FrontMessageResponse"]:
+        """READ - Get meeting chat message by ID"""
+        async with self.AsyncSessionLocal() as session:
+            chat_message = await session.get(FrontMessage, chat_id)
+            return FrontMessageResponse.model_validate(chat_message) if chat_message else None
+
+    async def get_all_front_chat_messages(self) -> List["FrontMessageResponse"]:
+        """READ - Get all meeting chat messages"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(FrontMessage)
+            result = await session.execute(stmt)
+            chat_messages = result.scalars().all()
+            return [FrontMessageResponse.model_validate(msg) for msg in chat_messages]
+
+    async def get_front_chat_by_chat_id(self, chat_id: str) -> List["FrontMessageResponse"]:
+        """READ - Get all chat messages for a specific meet"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(FrontMessage).where(FrontMessage.chat_id == chat_id).order_by(FrontMessage.time)
+            result = await session.execute(stmt)
+            chat_messages = result.scalars().all()
+            return [FrontMessageResponse.model_validate(msg) for msg in chat_messages]
+
+    async def update_front_chat_message(self, chat_id: str, chat_update: "FrontMessageUpdate") -> Optional["FrontMessageResponse"]:
+        """UPDATE - Update meeting chat message fields"""
+        async with self.AsyncSessionLocal() as session:
+            chat_message = await session.get(FrontMessage, chat_id)
+            if not chat_message:
+                return None
+
+            update_data = chat_update.model_dump(exclude_unset=True)
+            for field, value in update_data.items():
+                setattr(chat_message, field, value)
+
+            await session.commit()
+            await session.refresh(chat_message)
+            return FrontMessageResponse.model_validate(chat_message)
+
+    async def get_all_meet_topics(self, meet_id: str) -> List[List["FrontMessageResponse"]]:
+        """Get all chat messages grouped by chat_id for a specific meeting"""
+        async with self.AsyncSessionLocal() as session:
+            stmt = select(FrontMessage).where(FrontMessage.meet_id == meet_id).order_by(FrontMessage.chat_id, FrontMessage.time)
+            result = await session.execute(stmt)
+            chat_messages = result.scalars().all()
+            
+            grouped_chats = {}
+            for msg in chat_messages:
+                chat_id = msg.chat_id
+                if chat_id not in grouped_chats:
+                    grouped_chats[chat_id] = []
+                grouped_chats[chat_id].append(FrontMessageResponse.model_validate(msg))
+            
+            return list(grouped_chats.values())

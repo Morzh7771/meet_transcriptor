@@ -24,10 +24,8 @@ version: 1.0
             "type": "text",
             "text": """
             User question: {{ user_query }}
-            Meeting transcript:
-            {% for line in meeting_transcript %}
-                {{ line }}
-            {% endfor %}
+            Meeting info
+                {{ meeting }}
             """
         }
     }

@@ -1,7 +1,8 @@
+
 import json
 from pathlib import Path
 from sqlite3 import Connection
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,10 +13,10 @@ class ConfigBase(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-# class AccountConfig(ConfigBase):
-#     # ACC:str= Field(..., description="Email address of the qontext bot")
-#     EMAIL: str = Field(..., description="Email address of the qontext bot")
-#     PASSWORD: str = Field(..., description="Password of the qontext google account")
+class AccountConfig(ConfigBase):
+    # ACC:str= Field(..., description="Email address of the qontext bot")
+    EMAIL: str = Field(..., description="Email address of the qontext bot")
+    PASSWORD: str = Field(..., description="Password of the qontext google account")
 
 class BackendConfig(ConfigBase):
     BACKEND_URL: str = Field(..., description="Backed url of js")
@@ -26,6 +27,12 @@ class OpenAIConfig(ConfigBase):
     API_KEY: SecretStr = Field(
         ..., description="The API key for the OpenAI service"
     )
+
+class VectorDBConfig(ConfigBase):
+    model_config = SettingsConfigDict(env_prefix="QDRANT_")
+    URL: str = Field(default="http://localhost:6333", description="Qdrant server URL")
+    API_KEY: Optional[SecretStr] = Field(default=None, description="API key for Qdrant (optional for local)")
+
 
 class DBConfig(ConfigBase):
     model_config = SettingsConfigDict(env_prefix="SQL_")
@@ -51,11 +58,12 @@ class LawParserConfig(ConfigBase):
 
 class Config(BaseSettings):
     openai: OpenAIConfig = Field(default_factory=OpenAIConfig)
+    vectordb: VectorDBConfig = Field(default_factory=VectorDBConfig)
     db: DBConfig = Field(default_factory=DBConfig)
     vectordb: VectorDBConfig = Field(default_factory=VectorDBConfig)
     linkedinparser: LinkedinParserConfig = Field(default_factory=LinkedinParserConfig)
     lawparser: LawParserConfig = Field(default_factory=LawParserConfig)
-    # account: AccountConfig = Field(default_factory=AccountConfig)
+    account: AccountConfig = Field(default_factory=AccountConfig)
     backend: BackendConfig = Field(default_factory=BackendConfig)
 
     @classmethod

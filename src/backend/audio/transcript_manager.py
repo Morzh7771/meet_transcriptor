@@ -202,7 +202,6 @@ class TranscriptManager(BaseFacade):
             self.logger.info(f"Analysis result type: {type(analysis_result)}")
             self.logger.info(f"Analysis result value: {analysis_result}")
             self.logger.info(f"Analysis result repr: {repr(analysis_result)}")
-
             # If violation detected and callback is set, send alert to frontend
             if analysis_result:
                 self.logger.info("Analysis result is not None, checking has_violation...")
@@ -230,19 +229,19 @@ class TranscriptManager(BaseFacade):
             else:
                 self.logger.warning("No transcript lines generated for this chunk")
 
-            if self.full_transcript_buffer and len(self.full_transcript_buffer) % 6 == 0:
+            if self.full_transcript_buffer and len(self.full_transcript_buffer) % 1 == 0: # changed from 6 to 3
 
                 meets = await self.db.get_meets(client_id=client_id, consultant_id=consultant_id)
 
                 if meets:
                     last_meet = meets[0]
-                    scenario_to_use = last_meet.next_scenario
+                    scenario_to_use = last_meet.next_meet_scenario
                 else:
-                    scenario_to_use = None
+                    scenario_to_use = None # -----------???? default scenario?
 
                 try:
                     cumulative_text = "\n".join(self.full_transcript_buffer)
-                    validation_result = self.router_agent.validate_chunk(cumulative_text, scenario_to_use)
+                    validation_result = await self.router_agent.validate_chunk(cumulative_text, scenario_to_use)
                     self.logger.info(f"Scenario validation result: {validation_result}")
                 except Exception as e:
                     self.logger.error(f"Error during scenario validation: {e}")
@@ -310,13 +309,13 @@ class TranscriptManager(BaseFacade):
 
             overview = await self.meeting_analizer.generate_overview(full_transcript_text)
             overview = overview.overview
-            summary_and_tags = await self.meeting_analizer.summarize(full_transcript_text)
+            summary_and_tags = await self.meeting_analizer.summarize(full_transcript_text, meet_id)
             summary = summary_and_tags.summary
             tags = summary_and_tags.tags
             notes = await self.meeting_analizer.generate_notes(full_transcript_text)
             notes = notes.notes
-            action_items = await self.meeting_analizer.generate_action_items(full_transcript_text)
-            action_items = action_items.action_items
+            action_items = await self.meeting_analizer.generate_action_items(summary, meet_id)
+            action_items = action_items
             self.logger.info(f"The summary is: {summary}\nThe overview is: {overview}\nThe tags are: {tags}\nThe notes are: {notes}\nThe action_items are: {action_items}")
             
             await self.db.update_meet(meet_id, MeetUpdate(
@@ -338,6 +337,7 @@ class TranscriptManager(BaseFacade):
 
         except Exception as e:
             self.logger.error(f"❌ Failed to process full recording: {e}")
+
 
 
     def save_full_transcript(self):

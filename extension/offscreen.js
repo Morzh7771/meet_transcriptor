@@ -16,6 +16,10 @@ let websocket = null;
 let websocketPort = null;
 let websocketPingInterval = null;
 
+let chatWebsocket = null;
+let chatWebsocketPort = null;
+let chatWebsocketPingInterval = null;
+
 let mediaRecorder = null;
 const MEDIAREC_TIMESLICE = 200; // ms
 
@@ -159,12 +163,14 @@ const captureDesktop = async () => {
 const startSession = async () => {
   try {
     const meetCode = getRoomIdFromUrl(config.room) || config.room;
-    const requestBody = {
-      client_id: "d4dee85f-ebf7-46d3-a60f-a562d12bd328",
-      consultant_id: "68f997c0-95d5-4c88-b0c6-c5c13061ec2a",
+    console.log(config.clientId,config.consultantId)
+     const requestBody = {
+      client_id: config.clientId || "d4dee85f-ebf7-46d3-a60f-a562d12bd328",
+      consultant_id: config.consultantId || "68f997c0-95d5-4c88-b0c6-c5c13061ec2a",
       meet_code: meetCode,
       meeting_language: "ru"
     };
+
     const res = await fetch(`${config.apiBase}/start`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -177,9 +183,12 @@ const startSession = async () => {
     const data = await res.json();
     if (data.ok === false) throw new Error(data.error || "Backend returned ok: false");
     websocketPort = data.ws_port;
+    chatWebsocketPort = data.chat_port;
     if (!websocketPort) throw new Error("No ws_port in backend response");
+    if (!chatWebsocketPort) throw new Error("No chat_port in backend response");
     console.log("[offscreen] Got WebSocket port:", websocketPort);
-    return websocketPort;
+    console.log("[offscreen] Got Chat WebSocket port:", chatWebsocketPort);
+    return { websocketPort, chatWebsocketPort };
   } catch (e) {
     console.error("[offscreen] Failed to start session:", e);
     throw e;
@@ -204,6 +213,45 @@ const stopWebSocketPing = () => {
     clearInterval(websocketPingInterval);
     websocketPingInterval = null;
   }
+};
+
+const startChatWebSocketPing = () => {
+  if (chatWebsocketPingInterval) clearInterval(chatWebsocketPingInterval);
+  chatWebsocketPingInterval = setInterval(() => {
+    if (chatWebsocket && chatWebsocket.readyState === WebSocket.OPEN) {
+      try {
+        chatWebsocket.send(JSON.stringify({ type: "ping", timestamp: Date.now() }));
+      } catch (e) {
+        console.warn("[offscreen] Failed to send chat ping:", e);
+      }
+    }
+  }, 5000);
+};
+
+const stopChatWebSocketPing = () => {
+  if (chatWebsocketPingInterval) {
+    clearInterval(chatWebsocketPingInterval);
+    chatWebsocketPingInterval = null;
+  }
+};
+
+// Format violation data for display
+const formatViolationMessage = (violationData) => {
+  if (!violationData || typeof violationData !== 'object') {
+    return JSON.stringify(violationData);
+  }
+  
+  // Format the violation data in a readable way
+  const lines = [];
+  for (const [key, value] of Object.entries(violationData)) {
+    if (typeof value === 'object' && value !== null) {
+      lines.push(`${key}: ${JSON.stringify(value, null, 2)}`);
+    } else {
+      lines.push(`${key}: ${value}`);
+    }
+  }
+  
+  return lines.join('\n');
 };
 
 // MediaRecorder restart logic
@@ -432,6 +480,90 @@ const connectWebSocket = async () => {
   });
 };
 
+const connectChatWebSocket = async () => {
+  if (!chatWebsocketPort) throw new Error("Chat WebSocket port not available");
+  return new Promise((resolve, reject) => {
+    const wsUrl = `ws://localhost:${chatWebsocketPort}`;
+    console.log("[offscreen] Chat WebSocket URL:", wsUrl);
+    chatWebsocket = new WebSocket(wsUrl);
+
+    chatWebsocket.onopen = () => {
+      console.log("[offscreen] Chat WebSocket connected successfully");
+      startChatWebSocketPing();
+      resolve();
+    };
+
+    chatWebsocket.onerror = (err) => {
+      console.error("[offscreen] Chat WebSocket error:", err);
+      stopChatWebSocketPing();
+      reject(new Error(`Chat WebSocket connection failed to ${wsUrl}`));
+    };
+
+    chatWebsocket.onclose = (event) => {
+      console.log("[offscreen] Chat WebSocket closed:", event.code, event.reason);
+      stopChatWebSocketPing();
+      if (isRunning && event.code !== 1000) {
+        console.log("[offscreen] Reconnecting Chat WebSocket in 2s");
+        setTimeout(() => {
+          if (isRunning) {
+            connectChatWebSocket().catch(e => console.error("[offscreen] Chat WS reconnection failed:", e));
+          }
+        }, 2000);
+      }
+    };
+
+    chatWebsocket.onmessage = (event) => {
+      console.log("[offscreen] Chat WebSocket raw event:", event);
+      try {
+        if (typeof event.data === "string") {
+          const data = JSON.parse(event.data);
+          
+          console.log("[offscreen] Chat WebSocket parsed data:", data);
+          
+          if (data.type === "pong") return;
+          
+          if (data.type === "violation_detected") {
+            console.log("=== VIOLATION DETECTED ===");
+            console.log("Full data object:", JSON.stringify(data, null, 2));
+            
+            // Extract only the 'res' field from data.data
+            let violationText = "";
+            if (data.data && typeof data.data === 'object' && data.data.res) {
+              violationText = String(data.data.res);
+            } else {
+              // Fallback: if no 'res' field, show entire data
+              violationText = JSON.stringify(data.data, null, 2);
+            }
+            
+            console.log("[offscreen] Sending violation text (res field):", violationText);
+            
+            // Send to background script, which will forward to content
+            chrome.runtime.sendMessage({
+              type: "violation-alert",
+              message: violationText,
+              timestamp: data.timestamp
+            }).then(() => {
+              console.log("[offscreen] Violation sent to background");
+            }).catch((e) => {
+              console.error("[offscreen] Failed to send to background:", e);
+            });
+          }
+        }
+      } catch (e) {
+        console.error("[offscreen] Error parsing Chat WebSocket message:", e);
+      }
+    };
+
+    setTimeout(() => {
+      if (chatWebsocket.readyState !== WebSocket.OPEN) {
+        try { chatWebsocket.close(); } catch {}
+        stopChatWebSocketPing();
+        reject(new Error("Chat WebSocket connection timeout"));
+      }
+    }, 10000);
+  });
+};
+
 // Modified startWebMRecorder with improved audio mixing from file 2
 const startWebMRecorder = async () => {
   // Stop existing recorder if any
@@ -544,6 +676,8 @@ const startCapture = async (opts = {}) => {
     room: opts.room || String(Date.now()),
     chunkMs: Math.max(1000, Math.min(120000, opts.chunkMs || config.chunkMs)),
     desktop: !!opts.desktop,
+    clientId: opts.clientId,
+    consultantId: opts.consultantId
   });
 
   isRunning = true;
@@ -593,10 +727,13 @@ const startCapture = async (opts = {}) => {
     await startSession();
 
     console.log("[offscreen] Waiting 5s for backend to open WebSocket port");
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 10000));
 
     console.log("[offscreen] Connecting WebSocket");
     await connectWebSocket();
+
+    console.log("[offscreen] Connecting Chat WebSocket");
+    await connectChatWebSocket();
 
     // Start recording with the captured streams
     await startWebMRecorder();
@@ -629,6 +766,7 @@ const stopCapture = async () => {
 
   stopSpeakerStateUpdates();
   stopWebSocketPing();
+  stopChatWebSocketPing();
 
   if (mediaRecorder && mediaRecorder.state !== "inactive") {
     try { 
@@ -659,11 +797,26 @@ const stopCapture = async () => {
     websocket = null;
   }
 
+  if (chatWebsocket) {
+    if (chatWebsocket.readyState === WebSocket.OPEN) {
+      try {
+        console.log("[offscreen] Closing Chat WebSocket");
+        await new Promise(r => setTimeout(r, 100));
+      } catch {}
+    }
+    try { 
+      chatWebsocket.close(); 
+      console.log("[offscreen] Chat WebSocket closed");
+    } catch {}
+    chatWebsocket = null;
+  }
+
   [tabStream, micStream].forEach((s) => {
     if (s) s.getTracks().forEach(t => t.stop());
   });
   tabStream = micStream = null;
   websocketPort = null;
+  chatWebsocketPort = null;
 
   console.log("[offscreen] Stopped WebM audio streaming");
 };

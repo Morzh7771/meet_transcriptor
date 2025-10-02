@@ -20,6 +20,7 @@ version: 1.0
             3. Provide clear reasoning for your decision
 
             Be thorough but fair - not every flagged statement is a true violation. Consider context, intent, and whether actual regulatory standards were breached.
+            make answer just 'str' with conclusion, without any markdown or code blocks
             """
         }
     },
@@ -40,6 +41,11 @@ version: 1.0
 
             # Applicable Law/Regulation
             {{law_desc}}
+
+            ---
+
+            # Retrieved Law Context
+            {{law_rag}}
 
             """
         }

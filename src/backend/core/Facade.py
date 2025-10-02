@@ -7,7 +7,9 @@ from src.backend.api.js_plagin_api import JsPluginApi
 from src.backend.audio.audio_server import AudioServer
 from src.backend.core.baseFacade import BaseFacade
 from src.backend.modules.chatBot import ChatBot
-
+from src.backend.rag_db.ragFacade import RAGFacade
+from src.backend.vector_db.sql_to_vector import SQLQdrantSynchronizer
+from src.backend.vector_db.qdrant_manager import QdrantManager
 class Facade(BaseFacade):
     def __init__(self):
         super().__init__()
@@ -17,6 +19,47 @@ class Facade(BaseFacade):
         self.js_plugin_api = JsPluginApi(self.email, self.password, self.backend_url)
         self.session_done = asyncio.Event()
         self.chat_bot = ChatBot()
+        self.quadrant_manager = QdrantManager(self.configs.vectordb.URL, self.configs.vectordb.API_KEY.get_secret_value())
+        self.quadrant_manager.create_collection('meetings',1536)
+        self.rag_facade = RAGFacade()
+        
+
+
+    async def process_rag_chat(self, message: str, chat_id: str = None, user_id: str = None):
+            chat_id = chat_id or str(uuid4())
+            user_id = user_id or str(uuid4())
+            try:
+
+                rag_result = await asyncio.to_thread(
+                    self.rag_facade.search_with_llm_filters, message)
+                
+                # Extract response
+                response = {
+                    "message": rag_result.get("answer", "Sorry, we couldn't get a response."),
+                }
+                
+                self.logger.info(
+                    f"RAG chat processed: chat_id={chat_id}, user_id={user_id}, "
+                    f"results={rag_result.get('total_results', 0)}"
+                )
+                
+                return chat_id, user_id, response
+                
+            except Exception as e:
+                self.logger.error(f"Error in RAG chat processing: {e}", exc_info=True)
+                return chat_id, user_id, {
+                    "message": f"An error occurred while processing your request.: {str(e)}",
+                }
+
+    async def sync(self, recreate: bool = False):
+        """Sync meetings from SQL to vector DB"""
+        def _sync():
+            sync = SQLQdrantSynchronizer()
+            if recreate:
+                sync.recreate_collection()
+            return sync.sync_all()
+        
+        return await asyncio.to_thread(_sync)
 
     async def find_free_port(self, max_attempts=1000):
         tried_ports = set()

@@ -36,6 +36,24 @@
     }
   };
 
+  // Add violation to top of transcript - SIMPLE VERSION
+  const addViolation = (violationMessage) => {
+    if (!transcriptEl) {
+      console.warn("[content] transcriptEl not available");
+      return;
+    }
+    
+    console.log("[content] Adding violation to transcript:", violationMessage);
+    
+    const timestamp = new Date().toLocaleTimeString();
+    const formattedViolation = `VIOLATION: \n${violationMessage}`;
+    
+    const currentContent = transcriptEl.value || "";
+    transcriptEl.value = currentContent ? `${formattedViolation}\n\n${currentContent}` : formattedViolation;
+    
+    console.log("[content] Transcript updated, new length:", transcriptEl.value.length);
+  };
+
   // SIMPLE function: scan all participants and their speaking state
   const scanAndUpdateSpeakers = () => {
     const rings = document.querySelectorAll('[jscontroller="YQvg8b"]');
@@ -131,6 +149,10 @@
     isRecording = !!rec;
     if (startStopBtn) startStopBtn.textContent = rec ? "Stop" : "Start";
     setStatus(rec ? "PCM Streaming..." : "Idle");
+
+    // Disable/enable ID inputs during recording
+    if (clientIdInput) clientIdInput.disabled = rec;
+    if (consultantIdInput) consultantIdInput.disabled = rec;
   };
 
   const createPanel = () => {
@@ -150,6 +172,67 @@
     });
 
     const title = el("div", { textContent: "Qontext Audio Transcriptor (PCM Stream)" }, { fontWeight: "600", marginBottom: "6px" });
+    
+    // Create input fields container
+    const inputsContainer = el("div", {}, { marginTop: "8px", marginBottom: "8px" });
+    
+    // Client ID input
+    const clientIdLabel = el("label", { textContent: "Client ID:" }, { 
+      display: "block", 
+      fontSize: "12px", 
+      marginBottom: "4px",
+      color: "#ccc"
+    });
+    clientIdInput = el("input", { 
+      type: "text",
+      placeholder: "Enter Client ID",
+      value: localStorage.getItem("qontext_client_id") || ""
+    }, {
+      width: "100%",
+      padding: "8px",
+      marginBottom: "8px",
+      borderRadius: "6px",
+      border: "1px solid #444",
+      background: "#1a1a1a",
+      color: "#fff",
+      fontSize: "13px",
+      fontFamily: "system-ui,Arial,sans-serif",
+    });
+    
+    // Consultant ID input
+    const consultantIdLabel = el("label", { textContent: "Consultant ID:" }, { 
+      display: "block", 
+      fontSize: "12px", 
+      marginBottom: "4px",
+      color: "#ccc"
+    });
+    consultantIdInput = el("input", { 
+      type: "text",
+      placeholder: "Enter Consultant ID",
+      value: localStorage.getItem("qontext_consultant_id") || ""
+    }, {
+      width: "100%",
+      padding: "8px",
+      marginBottom: "4px",
+      borderRadius: "6px",
+      border: "1px solid #444",
+      background: "#1a1a1a",
+      color: "#fff",
+      fontSize: "13px",
+      fontFamily: "system-ui,Arial,sans-serif",
+    });
+    
+    // Save IDs to localStorage on input
+    clientIdInput.addEventListener("input", (e) => {
+      localStorage.setItem("qontext_client_id", e.target.value);
+    });
+    
+    consultantIdInput.addEventListener("input", (e) => {
+      localStorage.setItem("qontext_consultant_id", e.target.value);
+    });
+    
+    inputsContainer.append(clientIdLabel, clientIdInput, consultantIdLabel, consultantIdInput);
+    
     startStopBtn = el("button", { textContent: "Start" }, {
       marginTop: "4px",
       width: "100%",
@@ -173,7 +256,7 @@
       resize: "vertical",
     });
 
-    panel.append(title, startStopBtn, statusEl, transcriptEl);
+    panel.append(title, inputsContainer, startStopBtn, statusEl, transcriptEl);
     document.body.appendChild(panel);
     startStopBtn.onclick = () => (isRecording ? handleStop() : handleStart());
     setRecording(false);
@@ -183,17 +266,33 @@
     if (!panel) return;
     if (isRecording) handleStop().catch(() => {});
     panel.remove();
-    panel = startStopBtn = statusEl = transcriptEl = null;
+    panel = startStopBtn = statusEl = transcriptEl = clientIdInput = consultantIdInput = null;
   };
 
   const handleStart = async () => {
     console.log("[content] Start PCM streaming button clicked");
+
+    // Validate IDs
+    const clientId = clientIdInput?.value?.trim();
+    const consultantId = consultantIdInput?.value?.trim();
+    
+    if (!clientId || !consultantId) {
+      alert("Please enter both Client ID and Consultant ID before starting");
+      setStatus("Error: IDs required");
+      return;
+    }
+
     startStopBtn.disabled = true;
     setStatus("Starting PCM session...");
 
     const startMessage = {
       type: "start",
-      opts: { apiBase: API_BASE, room: ROOM},
+      opts: { 
+        apiBase: API_BASE, 
+        room: ROOM,
+        clientId: clientId,
+        consultantId: consultantId
+      },
     };
 
     const ack = await sendExtMessage(startMessage);
@@ -248,15 +347,29 @@
     }
   };
 
-  // Listen for transcript messages
+  // Listen for transcript and violation messages
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    console.log("[content] Received message type:", msg?.type, "Full message:", msg);
+    
     if (msg?.type === "chunk-transcript" && msg.data?.processed_text) {
       const textToShow = msg.data.processed_text.trim();
+      console.log("[content] Processing transcript:", textToShow);
       if (textToShow && !transcriptEl?.value?.includes(textToShow)) {
         addTranscript(textToShow);
       }
     }
+    
+    if (msg?.type === "violation-message") {
+      console.log("[content] Processing violation message:", msg.message);
+      if (msg.message) {
+        addViolation(msg.message);
+      } else {
+        console.warn("[content] Violation message is empty");
+      }
+    }
+    
     sendResponse({ ok: true });
+    return true; // Keep message channel open for async response
   });
 
   setTimeout(checkMeetingState, 1000);

@@ -14,7 +14,7 @@ class Transcriber(BaseFacade):
 
     def __init__(self):
         super().__init__()
-        self.enc = tiktoken.encoding_for_model("gpt-4o")
+        self.enc = tiktoken.encoding_for_model("gpt-4.1")
         self.CHUNK_SIZE = 10_000
 
     async def transcribe(self, webm_file: str, return_segments: bool = False, language: str = None) -> str:
@@ -74,7 +74,7 @@ class Transcriber(BaseFacade):
             else:
                 history.append(messages[1])
 
-            result = await self.completion("gpt-4o",
+            result = await self.completion("gpt-4.1",
                                         messages=history,
                                         max_tokens=16000,
                                         output_model=MatchSpeakersOtput)

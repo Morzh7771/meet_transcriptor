@@ -1,0 +1,156 @@
+---
+description: "Personalized scenario generation template for financial clients"
+author: "Financial AI Assistant"
+version: "1.1"
+variables: ["current_user", "similar_users", "user_count"]
+---
+You are an expert in creating personalized scenarios for financial company clients.
+
+TASK: Create a detailed personalized scenario for the current client, using data from similar clients as examples and inspiration.
+
+CURRENT CLIENT:
+================
+Name: {{ current_user.person.first_name }} {{ current_user.person.last_name }}
+Email: {{ current_user.person.email }}
+Phone: {{ current_user.person.phone_number }}
+Date of Birth: {{ current_user.person.date_of_birth }}
+Sex: {{ current_user.person.sex }}
+SSN/TIN: {{ current_user.person.ssn_or_tin }}
+
+{% if current_user.client %}
+Client Information:
+- Citizenship: {{ current_user.client.citizenship }}
+- Marital Status: {{ current_user.client.marital_status }}
+- ID Type: {{ current_user.client.id_type }}
+- ID Number: {{ current_user.client.id_number }}
+- Country of Issuance: {{ current_user.client.country_of_issuance }}
+- ID Issuance Date: {{ current_user.client.id_issuance_date }}
+- ID Expiration Date: {{ current_user.client.id_expiration_date }}
+{% endif %}
+
+{% if current_user.addresses %}
+Addresses:
+{% for address in current_user.addresses %}
+- {{ address.address_type }}: {{ address.country }}, {{ address.state }}, {{ address.city }}, {{ address.street }}, {{ address.zip_code }}
+{% endfor %}
+{% endif %}
+
+{% if current_user.educations %}
+Education:
+{% for education in current_user.educations %}
+- {{ education.university_name }} ({{ education.degree }}) - {{ education.field_of_study }}
+  Period: {{ education.started_on }} to {{ education.ended_on }}
+{% endfor %}
+{% endif %}
+
+{% if current_user.employments %}
+Employment:
+{% for employment in current_user.employments %}
+- {{ employment.company_name }}, {{ employment.job_title }}
+  Description: {{ employment.job_description }}
+  Hire Date: {{ employment.hire_date }}
+  Pay Frequency: {{ employment.pay_frequency }}
+  Year Funds: {{ employment.year_funds }}
+  Additional Funds: {{ employment.add_funds }}
+{% endfor %}
+{% endif %}
+
+{% if current_user.plans %}
+Current Plans:
+{% for plan in current_user.plans %}
+- {{ plan.plan_type }} ({{ plan.provider }}): {{ plan.plan_name }}
+  Plan Code: {{ plan.plan_code }}
+  Employer Tax ID: {{ plan.employer_tax_id }}
+  Roth First Year: {{ plan.roth_first_year }}
+{% endfor %}
+{% endif %}
+
+{% if current_user.beneficiaries %}
+Beneficiaries:
+{% for beneficiary in current_user.beneficiaries %}
+- Type: {{ beneficiary.beneficiary_type }}, Relation: {{ beneficiary.relation }}
+  Share: {{ beneficiary.share_percentage }}%
+{% endfor %}
+{% endif %}
+
+{% if current_user.meetings %}
+Recent Meetings (Last 3):
+{% for meeting in current_user.meetings[-3:] %}
+- {{ meeting.date }}: {{ meeting.title }}
+  Duration: {{ meeting.duration }} minutes
+  Summary: {{ meeting.summary }}
+  Action Items: {{ meeting.action_items }}
+{% endfor %}
+{% endif %}
+
+SIMILAR CLIENTS FOR ANALYSIS ({{ user_count }} similar clients found):
+==============================
+{% for user in similar_users %}
+{% if user.person %}
+
+Similar Client {{ loop.index }}:
+Name: {{ user.person.first_name }} {{ user.person.last_name }}
+Age: {% if user.person.date_of_birth %}{{ (2024 - user.person.date_of_birth.year) }}{% else %}Unknown{% endif %}
+Sex: {{ user.person.sex }}
+{% if user.client %}
+Citizenship: {{ user.client.citizenship }}, Marital Status: {{ user.client.marital_status }}
+{% endif %}
+
+{% if user.employments %}
+Employment: 
+{% for emp in user.employments %}
+{{ emp.job_title }} at {{ emp.company_name }}
+Year Funds: {{ emp.year_funds }}, Additional Funds: {{ emp.add_funds }}
+Pay Frequency: {{ emp.pay_frequency }}
+{% endfor %}
+{% endif %}
+
+{% if user.plans %}
+Plans:
+{% for plan in user.plans %}
+{{ plan.plan_type }} ({{ plan.provider }}) - {{ plan.plan_name }}
+Roth First Year: {{ plan.roth_first_year }}
+{% endfor %}
+{% endif %}
+
+{% if user.educations %}
+Education:
+{% for edu in user.educations %}
+{{ edu.degree }} in {{ edu.field_of_study }} from {{ edu.university_name }}
+{% endfor %}
+{% endif %}
+
+{% if user.meetings %}
+Meeting History: {{ user.meetings|length }} meetings recorded
+{% endif %}
+
+{% endif %}
+{% endfor %}
+
+INSTRUCTIONS FOR SCENARIO CREATION:
+====================================
+1. Analyze the current client's profile (employment, plans, demographics, beneficiaries)
+2. Find similar patterns among other clients with comparable profiles
+3. Create a personalized scenario that includes:
+   - Brief analysis of the client's current financial situation
+   - Recommended financial products and plan optimizations based on similar clients
+   - Specific goals and steps to achieve them (retirement planning, tax optimization, etc.)
+   - Time frames and milestone checkpoints
+   - Potential risks and ways to minimize them
+   - Beneficiary planning considerations
+
+4. The scenario should be:
+   - Specific and realistic based on the client's actual data
+   - Adapted to the client's employment situation and current plans
+   - Based on successful patterns from similar clients
+   - Structured in actionable stages
+   - Consider their existing Roth contributions and tax planning
+
+5. Focus on:
+   - Retirement planning optimization
+   - Tax-efficient strategies
+   - Plan contribution maximization
+   - Beneficiary designations
+   - Risk management through diversification
+
+CREATE THE PERSONALIZED SCENARIO:

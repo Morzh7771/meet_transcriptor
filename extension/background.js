@@ -55,12 +55,20 @@ async function ensureMicPermissionFixed() {
 async function broadcast(payload) {
   try {
     const tabs = await chrome.tabs.query({ url: ["https://meet.google.com/*"] });
-    tabs.forEach(t => chrome.tabs.sendMessage(t.id, payload).catch(() => {}));
-    chrome.runtime.sendMessage(payload).catch(() => {});
-  } catch {}
+    console.log("[background] Broadcasting to", tabs.length, "Meet tabs:", payload.type);
+    tabs.forEach(t => {
+      chrome.tabs.sendMessage(t.id, payload)
+        .then(() => console.log("[background] Sent to tab", t.id))
+        .catch((e) => console.log("[background] Failed to send to tab", t.id, e.message));
+    });
+  } catch (e) {
+    console.error("[background] Broadcast error:", e);
+  }
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  console.log("[background] Received message:", msg?.type, "from:", sender.tab ? "tab" : "extension");
+  
   (async () => {
     try {
       switch (msg?.type) {
@@ -71,7 +79,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case "start":
           await ensureMicPermissionFixed();
           {
-            const startResp = await offscreenSend({ type: "offscreen-start", opts: msg.opts || {} });
+            // Pass through clientId and consultantId from opts
+            const opts = msg.opts || {};
+            const startResp = await offscreenSend({ 
+              type: "offscreen-start", 
+              opts: {
+                apiBase: opts.apiBase,
+                room: opts.room,
+                clientId: opts.clientId,
+                consultantId: opts.consultantId
+              }
+            });
             isRecording = !!(startResp?.ok);
             sendResponse({ ok: isRecording });
           }
@@ -86,7 +104,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           break;
 
         case "chunk-transcript":
+          console.log("[background] Broadcasting transcript to Meet tabs");
           await broadcast({ type: "chunk-transcript", data: msg.data });
+          sendResponse({ ok: true });
+          break;
+
+        case "violation-alert":
+          console.log("[background] Received violation alert, broadcasting to Meet tabs");
+          console.log("[background] Violation message:", msg.message);
+          await broadcast({ 
+            type: "violation-message", 
+            message: msg.message,
+            timestamp: msg.timestamp 
+          });
           sendResponse({ ok: true });
           break;
 

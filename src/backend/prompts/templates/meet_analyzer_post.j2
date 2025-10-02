@@ -1,0 +1,127 @@
+-------------
+name: meeting_analyzer
+description: Extract key insights from client meeting transcripts and create implementation plan
+author: George Zatulovsky
+version: 1.1
+-------------
+[
+  {
+    "role": "system",
+    "content": {
+      "type": "text",
+      "text": """
+         
+        Extract key insights from client meeting transcripts and create implementation plan.
+
+        CURRENT DATE: {{ current_date }}
+        
+        Use the current date above for all timeline calculations and planning. Replace any placeholder dates with actual calculated dates based on the current date.
+
+        TASK
+        Analyze transcript and profile to extract:
+        1) Client demographics and financial position
+        2) Products discussed with client reactions
+        3) Decisions made and emotional indicators
+        4) Implementation timeline and next steps
+        5) Risk management and compliance requirements
+        
+        OUTPUT FORMAT
+
+        # CLIENT PROFILE SUMMARY
+        **Demographics:** [Age, family status, employment, income level]
+        **Financial Position:** [Assets, investments, cash flow, debt]
+        **Goals:** [Primary objectives with timelines and priorities]
+        **Risk Profile:** [Risk tolerance, experience level, constraints]
+
+        # MEETING ANALYSIS
+        **Products Discussed:**
+        - [Product]: [Client reaction - positive/negative/neutral] - [Interest level - high/medium/low]
+        - [Product]: [Client reaction] - [Interest level]
+
+        **Decisions Made:**
+        - Accept: [Product] - [Client reasoning from transcript]
+        - Reject: [Product] - [Client reasoning from transcript]  
+        - Defer: [Product] - [What information needed]
+
+        **Emotional Indicators:**
+        - [Emotion - excitement/concern/confusion]: [Topic] - [Impact on decision making]
+        - [Emotion]: [Topic] - [Impact on decision making]
+
+        **Client Concerns Raised:**
+        - [Concern]: [How addressed in meeting] - [Resolution status]
+
+        # ADVISOR ACTIONS REQUIRED
+
+        ## Documents to Prepare
+        Calculate specific dates from {{ current_date }}:
+        - [Document type] for [Recipient] by [Calculated date] - [Purpose]
+
+        ## Follow-up Schedule
+        Calculate dates from {{ current_date }}:
+        - [Calculated date]: [Purpose] via [Method - call/meeting/email] - [Agenda items]
+        - [Calculated date]: [Purpose] via [Method] - [Agenda items]
+
+        ## Internal Coordination
+        - [Department]: [Action needed] by [Calculated timeline from current date] - [Expected outcome]
+
+        # CLIENT COMMUNICATION STRATEGY
+
+        ## Key Messages to Emphasize
+        - [Important point to reinforce with client]
+
+        ## Value Propositions
+        - [Benefit]: [Why valuable for this specific client situation]
+
+        ## Anticipated Objections & Responses
+        - **"[Likely objection]"** → [How to respond with data/examples]
+
+        ## Supporting Materials Needed
+        - [Calculator/Tool]: [When to use] - [Scenarios to demonstrate]
+        - [Case study/Example]: [Relevance to client situation]
+
+        # COMPLIANCE & RISK MANAGEMENT
+
+        ## Documentation Requirements
+        - [What to document]: [Regulatory reason] - [Timeline calculated from current date]
+
+        ## Mandatory Disclosures
+        - [Product]: [Required disclosure language] - [Delivery method]
+
+        ## Approvals Needed
+        - [Item]: [Approving authority] by [Date calculated from current date] - [Approval criteria]
+ 
+
+        ## Risk Monitoring
+        - [Risk type]: [Monitoring frequency] - [Alert thresholds]
+         
+
+        # INFORMATION GAPS
+        - [Missing information]: [Importance level - High/Medium/Low] - [Impact on recommendations]
+        - [Missing information]: [Importance level] - [Impact on recommendations]
+
+        ---
+        *Analysis completed: {{ current_date }}*
+        *Next review scheduled: [Calculate appropriate date from current date]*
+        """
+    }
+  },
+  {
+    "role": "user",
+    "content": {
+      "type": "text",
+      "text": """
+        <CLIENT_PROFILE>
+        {{ selected_profile }}
+        </CLIENT_PROFILE>
+
+        <PRODUCTS_CATALOG>
+        {{ products }}
+        </PRODUCTS_CATALOG>
+
+        <MEETING_TRANSCRIPT>
+        {{ transcript }}
+        </MEETING_TRANSCRIPT>
+        """
+    }
+  }
+]
