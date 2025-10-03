@@ -1,14 +1,14 @@
 import asyncio
-import os
 from typing import Optional, List
 from openai import OpenAI
 
 from src.backend.scenario_generator.datascrapper import ClientDataReader, FullClientData
 from src.backend.prompts.promptFacade import PromptFacade
 from src.backend.utils.configs import Config
+from src.backend.core.baseFacade import BaseFacade
 
 
-class ScenarioFacade:
+class ScenarioFacade(BaseFacade):
     def __init__(self):
         self.configs = Config().load_config()
         self.client_reader = ClientDataReader()
@@ -29,87 +29,67 @@ class ScenarioFacade:
 
     async def call_llm_for_scenario(self, prompt: str) -> str:
         """Use OpenAI 1.x client; wrap sync call in a worker thread for asyncio compatibility."""
+
+        llm_scenario_template = eval(PromptFacade.get_prompt("llm_scenario_template", prompt=prompt))
         def _call():
             return self.client.chat.completions.create(
                 model=self.chat_model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are an expert at creating personalized scenarios for customers based on their data "
-                            "and similar customers. Provide detailed, actionable scenarios that can help insurance "
-                            "consultants better understand and serve their clients."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.7,
+                messages=llm_scenario_template,
+                temperature=0.3,
                 max_tokens=2500,
             )
         response = await asyncio.to_thread(_call)
         return response.choices[0].message.content.strip()
 
-    async def generate_scenario_for_user(self, user_email: str, template_name: str = "scenario", similar_count: int = 3) -> str:
+    async def generate_scenario_for_user(self, client_email: str, template_name: str = "scenario", similar_count: int = 3) -> str:
         try:
-            print(f"Generating scenario for user: {user_email}")
-            current_user = await self.client_reader.get_client_by_email(user_email)
-            if not current_user:
-                raise Exception(f"User with email {user_email} is not found.")
-            print(f"User founded: {current_user.person.first_name} {current_user.person.last_name}")
+            self.logger.info(f"Generating scenario for user: {client_email}")
+            current_client = await self.client_reader.get_client_by_email(client_email)
+            if not current_client:
+                raise Exception(f"User with email {client_email} is not found.")
+            self.logger.info(f"User founded: {current_client.person.first_name} {current_client.person.last_name}")
 
-            similar_data = await self.client_reader.get_similar_clients_for_target(user_email, similar_count, update_vector_db=True)
+            similar_data = await self.client_reader.get_similar_clients_for_target(client_email, similar_count, update_vector_db=True)
             if isinstance(similar_data, dict) and "error" in similar_data:
-                print(f"ALARM: {similar_data['error']}")
-                similar_users: List[FullClientData] = []
+                self.logger.error(f"ALARM: {similar_data['error']}")
+                similar_clients: List[FullClientData] = []
             else:
-                similar_users = [item["client_data"] for item in similar_data.get("similar_clients", [])]
-                print(f"Founded {len(similar_users)} similar users")
-            print(similar_users)
-            print(f"Generating prompt with template: {template_name}")
-            prompt = self.get_prompt_with_context(template_name, current_user, similar_users)
+                similar_clients = [item["client_data"] for item in similar_data.get("similar_clients", [])]
+                self.logger.info(f"Founded {len(similar_clients)} similar users")
+            self.logger.info(similar_clients)
+            self.logger.info(f"Generating prompt with template: {template_name}")
+            prompt = self.get_prompt_with_context(template_name, current_client, similar_clients)
 
-            print("Sending a request to LLM...")
+            self.logger.info("Sending a request to LLM...")
             scenario = await self.call_llm_for_scenario(prompt)
-            print("The script was generated successfully.")
+            self.logger.info("The script was generated successfully.")
             return scenario
         except Exception as e:
-            print(f"Error generating script: {str(e)}")
+            self.logger.error(f"Error generating script: {str(e)}")
             raise
 
+#--------------------------VALIDATION--------------------------
+
     async def validate_chunk_against_scenario(self, scenario: str, chunk_text: str) -> str:
+
+        validate_scenario_template = eval(PromptFacade.get_prompt(
+            "validate_scenario_template",
+              scenario=scenario, 
+              chunk_text=chunk_text
+        ))
         try:
             def _call():
                 return self.client.chat.completions.create(
                     model=self.chat_model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are a conversation monitor between a consultant and a client.\n"
-                                "Your task is to verify if the consultant strictly follows the predefined scenario.\n"
-                                "If the consultant follows the scenario, return an empty response (no text).\n"
-                                "If the consultant deviates (e.g., instead of saying '401k' they say 'roth 401k'), "
-                                "clearly describe the mistake.\n"
-                                "Respond with only the result of the validation, without any extra explanation."
-                            ),
-                        },
-                        {
-                            "role": "user",
-                            "content": (
-                                f"Here is the predefined scenario:\n{scenario}\n\n"
-                                f"Here is the new conversation chunk:\n{chunk_text}\n\n"
-                                "Check if the consultant is following the scenario."
-                            ),
-                        },
-                    ],
-                    temperature=0,
+                    messages=validate_scenario_template,
+                    temperature=0.3,
                     max_tokens=500,
                 )
             response = await asyncio.to_thread(_call)
             return response.choices[0].message.content.strip()
         
         except Exception as e:
-            print(f"Error validating chunk: {str(e)}")
+            self.logger.error(f"Error validating chunk: {str(e)}")
             raise
     
 

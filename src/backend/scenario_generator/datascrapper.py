@@ -14,6 +14,7 @@ from src.backend.db.dbFacade import DBFacade
 from src.backend.models.db_models import *  # personResponse, ClientResponse, etc.
 
 from src.backend.vector_db.qdrant_Facade import VectorDBFacade
+from src.backend.core.baseFacade import BaseFacade
 
 # -------- Data container -------------------------------------------------------
 
@@ -48,7 +49,7 @@ def _group_by(items: List[Any], key):
 
 # -------- Core reader ----------------------------------------------------------
 
-class ClientDataReader:
+class ClientDataReader(BaseFacade):
     def __init__(self):
         self.db = DBFacade()
         vector_db = VectorDBFacade()
@@ -64,7 +65,7 @@ class ClientDataReader:
         try:
             person = await self.db.get_person_by_email(email)
             if not person:
-                print(f"Client with email '{email}' not found")
+                self.logger.error(f"Client with email '{email}' not found")
                 return None
 
             client = await self.db.get_client_by_id(person.client_id) if person.client_id else None
@@ -92,7 +93,7 @@ class ClientDataReader:
             return data
 
         except Exception as e:
-            print(f"Error fetching client '{email}': {e}")
+            self.logger.error(f"Error fetching client '{email}': {e}")
             return None
 
     # ---------- All clients ----------------------------------------------------
@@ -103,7 +104,7 @@ class ClientDataReader:
         """
         try:
             persons = await self.db.get_all_persons()
-            print(f"Found {len(persons)} persons in the database")
+            self.logger.info(f"Found {len(persons)} persons in the database")
 
             clients = await self.db.get_all_clients()
             addresses = await self.db.get_all_person_addresses()
@@ -138,11 +139,11 @@ class ClientDataReader:
                     )
                 )
 
-            print(f"Successfully assembled data for {len(all_data)} clients")
+            self.logger.info(f"Successfully assembled data for {len(all_data)} clients")
             return all_data
 
         except Exception as e:
-            print(f"Error fetching all clients: {e}")
+            self.logger.error(f"Error fetching all clients: {e}")
             return []
 
     # ---------- Similar clients + context -------------------------------------
@@ -162,15 +163,15 @@ class ClientDataReader:
             if not target_client:
                 return {"error": f"Target client with email '{target_email}' not found"}
 
-            print(f"Target client: {target_client.person.first_name} {target_client.person.last_name}")
+            self.logger.info(f"Target client: {target_client.person.first_name} {target_client.person.last_name}")
 
             if update_vector_db:
-                print("Refreshing vector database...")
+                self.logger.info("Refreshing vector database...")
                 all_clients = await self.get_all_clients()
                 await self.vector_similarity.store_all_clients(all_clients)
-                print("Vector database updated")
+                self.logger.info("Vector database updated")
 
-            print(f"Searching for top-{similarity_count} similar clients...")
+            self.logger.info(f"Searching for top-{similarity_count} similar clients...")
             similar_infos = await self.vector_similarity.find_similar_clients(
                 target_client, top_k=similarity_count
             )
@@ -194,7 +195,7 @@ class ClientDataReader:
                             }
                         )
 
-            print(f"Found {len(similar_full)} similar clients")
+            self.logger.info(f"Found {len(similar_full)} similar clients")
             return {
                 "target_client": target_client,
                 "similar_clients": similar_full,
@@ -202,7 +203,7 @@ class ClientDataReader:
             }
 
         except Exception as e:
-            print(f"Error searching similar clients: {e}")
+            self.logger.error(f"Error searching similar clients: {e}")
             return {"error": str(e)}
 
     async def prepare_scenario_context(self, target_email: str, similarity_count: int = 3) -> str:
@@ -346,20 +347,20 @@ class ClientDataReader:
         Initialize (or reinitialize) the vector DB with all clients.
         """
         try:
-            print("Initializing vector database...")
+            self.logger.info("Initializing vector database...")
             await self.vector_similarity.initialize_collection()
 
             all_clients = await self.get_all_clients()
             if not all_clients:
-                print("No clients found to initialize")
+                self.logger.error("No clients found to initialize")
                 return False
 
             count = await self.vector_similarity.store_all_clients(all_clients)
-            print(f"Vector database initialized with {count} clients")
+            self.logger.info(f"Vector database initialized with {count} clients")
             return count > 0
 
         except Exception as e:
-            print(f"Error initializing vector database: {e}")
+            self.logger.error(f"Error initializing vector database: {e}")
             return False
 
 
