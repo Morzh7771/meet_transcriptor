@@ -239,11 +239,16 @@ class TranscriptManager(BaseFacade):
                     last_meet = meets[0]
                     scenario_to_use = last_meet.next_meet_scenario
                 else:
-                    scenario_to_use = None # -----------???? default scenario?
+                    with open(r"src\backend\prompts\default_scenario\ds.txt", 
+                              "r", encoding="utf-8") as f:
+                        scenario_to_use = f.read()
 
                 try:
                     cumulative_text = "\n".join(self.full_transcript_buffer)
-                    validation_result = await self.router_agent.validate_chunk(cumulative_text, scenario_to_use)
+                    validation_result = await self.router_agent.validate_chunk(
+                        cumulative_text, 
+                        scenario_to_use
+                    )
                     self.logger.info(f"Scenario validation result: {validation_result}")
                 except Exception as e:
                     self.logger.error(f"Error during scenario validation: {e}")
