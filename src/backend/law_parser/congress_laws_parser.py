@@ -243,32 +243,3 @@ class CongressLawsQdrantProcessor:
         
         logger.info(f"Successfully processed and stored {self.processed_count} laws in Qdrant")
         return self.processed_count
-
-def main():
-    API_KEY = os.getenv("CONGRESS_API_KEY")
-    
-    if not API_KEY:
-        logger.error("CONGRESS_API_KEY not found in environment variables")
-        return
-    
-    processor = CongressLawsQdrantProcessor(API_KEY)
-    
-    try:
-        congress_range = list(range(112, 120))
-        
-        print("Starting Congress laws processing and Qdrant storage...")
-        print(f"Searching in congresses: {congress_range}")
-        print("Processing all relevant laws found (no limit)")
-        
-        processed_count = processor.process_and_store_laws(congress_range)
-        
-        print(f"\n{'='*80}")
-        print(f"COMPLETED! Processed and stored {processed_count} laws in Qdrant")
-        print(f"{'='*80}")
-        
-    except Exception as e:
-        logger.error(f"Script failed: {e}")
-        raise
-
-if __name__ == "__main__":
-    main()
