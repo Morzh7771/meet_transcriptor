@@ -25,23 +25,7 @@ version: 1.0
   },
   {
     "role": "user",
-    "content": {
-      "type": "text",
-      "text": """
-        User question:
-        {{ user_query }}
-
-        Law fragments (for your analysis only, do not include in the final answer):
-        {% for frag in fragments %}
-        [Fragment {{ loop.index }}] Law ID: {{ frag.metadata.id }} (part {{ frag.metadata.num_chunk }} of {{ frag.metadata.total_chunk }})
-        Relevance: {{ "%.3f"|format(frag.score) }}
-        Content:
-        {{ frag.text }}
-        ---
-        {% endfor %}
-
-        Final Answer:
-        """
+    "content": "User question: {{ user_query }}\n\nLaw fragments (for your analysis only, do not include in the final answer):\n{% for frag in fragments %}[Fragment {{ loop.index }}] Law ID: {{ frag.metadata.id }} (part {{ frag.metadata.num_chunk }} of {{ frag.metadata.total_chunk }})\nRelevance: {{ '%.3f'|format(frag.score) }}\nContent: {{ frag.text }}\n---\n{% endfor %}\nFinal Answer:"
     }
   }
 ]

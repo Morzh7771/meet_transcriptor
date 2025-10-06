@@ -58,7 +58,7 @@ class RouterAgent(BaseFacade):
                 law_rag_response_chunk = await self._rag_search(slm_response.chunk, limits=1)
                 law_rag_response_disk = await self._rag_search(slm_response.law_disk, limits=1)
                 law_rag_response = "\n".join([law_rag_response_chunk, law_rag_response_disk])
-
+                self.logger.info(f'LAW RAG RESPONSE: {law_rag_response}')
                 self.logger.info("Violation detected, calling LLM for detailed analysis...")
                 detailed_analysis = await self._analyze_with_llm(transcription_text, slm_response, law_rag_response)
                 self.logger.info(f"LLM Response type: {type(detailed_analysis)}")
@@ -117,9 +117,12 @@ class RouterAgent(BaseFacade):
             self.logger.info(f"RAG query: {query}")
             
             documents = self.law_rag_facade.search_laws(query, limits)
-            combined_docs = "\n".join(documents)
-            
-            self.logger.info(f"RAG search returned {len(documents)} documents.")
+            self.logger.info(f"RAG result type: {type(documents)}")
+            self.logger.info(f"RAG result keys: {documents.keys()}")
+             
+            combined_docs = "\n\n".join(item["text"] for item in documents["results"] if "text" in item)
+            self.logger.info(f"RAG search returned {len(documents)} documents. {documents}")
+            self.logger.info(f"RAG search returned documents - {combined_docs}")
             return combined_docs
             
         except Exception as e:
@@ -144,7 +147,7 @@ class RouterAgent(BaseFacade):
             ))
             
             self.logger.info(f"LLM prompt prepared, calling API...")
-            
+            self.logger.info(f"ALL DATA FOR LLM: {llm_prompt_template}")
             response = await self.client.chat.completions.create(
                 model=self.llm_model,
                 messages=llm_prompt_template,
@@ -202,7 +205,7 @@ class RouterAgent(BaseFacade):
         """
         return await self.analyze_transcription(transcription_text)
     
-    async def front_chat(self, chat_history, model="gpt-5-2025-08-07"):
+    async def front_chat(self, chat_history, model="gpt-4.1"):
 
         response = await self.client.chat.completions.create(
             model = model,

@@ -32,6 +32,7 @@ class TranscriptManager(BaseFacade):
         self.meet_id = None
         self.vector_db = VectorDBFacade()
         self.sql_to_vector = SQLQdrantSynchronizer()
+
     def set_violation_callback(self, callback):
         """
         Set callback function to send violation alerts.
@@ -39,6 +40,7 @@ class TranscriptManager(BaseFacade):
         Args:
             callback: Async function that accepts violation data dict
         """
+        
         self.violation_callback = callback
         
     def set_paths(self, paths):
@@ -192,12 +194,15 @@ class TranscriptManager(BaseFacade):
             full_text = "\n".join(text_lines)
             self.logger.info(f"The transcript is: {full_text}")
 
+
             chunks_to_analyze = self.last_chunks[-2:] + [full_text]
             context_text = "\n\n".join(chunks_to_analyze)
 
             self.logger.info("=== Before calling router_agent.analyze_transcription ===")
-            self.logger.info(f"Context text length: {len(context_text)}")
+
+            self.logger.info("Test transcript alert sent via callback 1")
             
+ 
             analysis_result = await self.router_agent.analyze_transcription(context_text)
             
             self.logger.info("=== After calling router_agent.analyze_transcription ===")
@@ -215,7 +220,7 @@ class TranscriptManager(BaseFacade):
                 if has_violation and self.violation_callback:
                     self.logger.info("Violation detected and callback is set, preparing alert...")
                     violation_alert = {
-                        "res": analysis_result
+                        "res": analysis_result["detailed_analysis"].response
                     }
                     await self.violation_callback(violation_alert)
                     self.logger.info("Violation detected and alert sent")
@@ -312,6 +317,10 @@ class TranscriptManager(BaseFacade):
 
             full_transcript = await self.transcriber.match_transcript_speakers(buffer_text, full_transcript_raw)
             full_transcript_text = "\n".join([f"{segment.speaker}: {segment.text}" for segment in full_transcript])
+  
+                
+ 
+
             self.logger.info(f"The full transcript returned from llm call is: {full_transcript_text}")
 
             overview = await self.meeting_analizer.generate_overview(full_transcript_text)
