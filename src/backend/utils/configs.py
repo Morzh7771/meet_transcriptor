@@ -13,10 +13,10 @@ class ConfigBase(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-# class AccountConfig(ConfigBase):
-#     # ACC:str= Field(..., description="Email address of the qontext bot")
-#     EMAIL: str = Field(..., description="Email address of the qontext bot")
-#     PASSWORD: str = Field(..., description="Password of the qontext google account")
+class AccountConfig(ConfigBase):
+    # ACC:str= Field(..., description="Email address of the qontext bot")
+    EMAIL: str = Field(..., description="Email address of the qontext bot")
+    PASSWORD: str = Field(..., description="Password of the qontext google account")
 
 class BackendConfig(ConfigBase):
     BACKEND_URL: str = Field(..., description="Backed url of js")
@@ -87,10 +87,10 @@ class Config(BaseSettings):
     vectordb: VectorDBConfig = Field(default_factory=VectorDBConfig)
     linkedinparser: LinkedinParserConfig = Field(default_factory=LinkedinParserConfig)
     lawparser: LawParserConfig = Field(default_factory=LawParserConfig)
-    searcher: GoogleSearchConfig = Field(default_factory=GoogleSearchConfig)
+    #searcher: GoogleSearchConfig = Field(default_factory=GoogleSearchConfig)
     filter: FilterConfig = Field(default_factory=FilterConfig)
     scraper: ScrapperConfig = Field(default_factory=ScrapperConfig)
-    # account: AccountConfig = Field(default_factory=AccountConfig)
+    account: AccountConfig = Field(default_factory=AccountConfig)
     backend: BackendConfig = Field(default_factory=BackendConfig)
 
     @classmethod

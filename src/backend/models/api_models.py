@@ -36,6 +36,13 @@ class ScenarioRequest(BaseModel):
 class ScenarioResponse(BaseModel):
     scenario: str
     
+class ScenarioRequestFirst(BaseModel):
+    client_id: str
+    consultant_id: str
+
+class ScenarioResponseFirst(BaseModel):
+    scenario: str
+    
 class RAGChat(BaseModel):
     message: str
     chat_id: Optional[str] = None

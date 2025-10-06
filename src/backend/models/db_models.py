@@ -340,15 +340,15 @@ class ConsultantResponse(BaseModel):
 class MeetCreate(BaseModel):
     client_id: str
     consultant_id: str
-    title: str
+    title: Optional[str] = "No title provided"
     summary: Optional[str] = "No summary provided"
-    date: datetime
+    date: Optional[datetime] = datetime.now()
     duration: Optional[int] = 0
     overview: Optional[str] = "No overview provided"
     notes: Optional[str] = "No notes provided"
     action_items: Optional[str] = "No action items provided"
     trascription: Optional[str] = "No transcript provided"
-    language: str
+    language: Optional[str] = "en"
     tags: Optional[str] = "No tags provided"
     participants: Optional[List[str]] = None
     next_meet_scenario: Optional[str] = ""
@@ -383,7 +383,7 @@ class MeetResponse(BaseModel):
     trascription: str
     language: str
     tags: str
-    participants: List[str]
+    participants: Optional[List[str]] = None
     next_meet_scenario: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

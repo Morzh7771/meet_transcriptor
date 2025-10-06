@@ -11,7 +11,6 @@ from src.backend.modules.chatBot import ChatBot
 from src.backend.utils.logger import CustomLog
 from src.backend.db.dbFacade import DBFacade
 from src.backend.models.db_models import *
-from src.backend.utils.logger import CustomLog
 
 class AudioServer():
     def __init__(self):
@@ -29,9 +28,11 @@ class AudioServer():
         self.CHUNK_INTERVAL = 10
         self._restart_ack_received = False
         self.recording_started = False
-        self.violations_ws = None  # WebSocket for sending violation alerts
+        self.violations_ws = None
         self.client_id = None
         self.consultant_id = None
+        # Event to signal that servers are ready
+        self.servers_ready = asyncio.Event()
 
     async def handler_whisper(self, ws, user_id, meet_id, meeting_language):
         self.logger.info("Whisper WebSocket connected")
@@ -344,6 +345,10 @@ class AudioServer():
             violations_port
         )
         
+        # Signal that servers are ready and listening
+        self.servers_ready.set()
+        self.logger.info(f"✅ WebSocket servers are ready on ports {ws_port} and {violations_port}")
+        
         try:
             await self.connection_closed.wait()
             self.logger.info("Session finished")
@@ -354,8 +359,6 @@ class AudioServer():
             violations_server.close()
             await violations_server.wait_closed()
             self.logger.info("WebSocket servers closed")
-
-    
 
     async def _finalize_session(self, meeting_language, meet_id):
         # Process any remaining data if we had a clean recording
@@ -435,3 +438,16 @@ class AudioServer():
             except websockets.exceptions.ConnectionClosed:
                 print("Connection closed")
                 break
+    
+    async def wait_until_ready(self, timeout=15):
+        """
+        Wait until WebSocket servers are ready.
+        Returns True if ready, False if timeout.
+        """
+        try:
+            await asyncio.wait_for(self.servers_ready.wait(), timeout=timeout)
+            self.logger.info("Server ready signal received")
+            return True
+        except asyncio.TimeoutError:
+            self.logger.error(f"Servers did not become ready within {timeout} seconds")
+            return False

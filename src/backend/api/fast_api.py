@@ -1,6 +1,6 @@
 import asyncio
-from typing import List,Dict
-from fastapi import FastAPI, HTTPException, Body,status
+from typing import List, Dict
+from fastapi import FastAPI, HTTPException, Body, status
 from fastapi.middleware.cors import CORSMiddleware
 from src.backend.models.api_models import *
 from src.backend.core.Facade import Facade
@@ -17,12 +17,27 @@ scenario_facade = ScenarioFacade()
 db_facade = DBFacade()
 facade = Facade()
 vector_db = VectorDBFacade()
+
+# Keep track of recorder coroutines keyed by meet-code
+# This allows parallel execution of multiple sessions
+_session_tasks: Dict[str, asyncio.Task] = {}
+_session_tasks_lock = asyncio.Lock()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    
     await db_facade.create_tables()
     await vector_db.ensure_client_profiles_initialized()
     yield
+    # Clean up any running sessions on shutdown
+    async with _session_tasks_lock:
+        for meet_code, task in list(_session_tasks.items()):
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
     
 app = FastAPI(
     title="Database Management API",
@@ -40,38 +55,102 @@ app.add_middleware(
 )
 
 
-# One Facade for the whole service.
-facade = Facade()
-db = DBFacade()
-vector_db = VectorDBFacade()
-# Keep track of recorder coroutines keyed by meet-code (or any session ID you prefer).
-_session_tasks: Dict[str, asyncio.Task] = {}
-
-
 @app.post("/start")
 async def start(request: StartMeetingRequest):
     """
-    Launch recording for *meet_code*.
+    Launch recording for meet_code.
+    
+    Returns only when WebSocket servers are ready and listening.
+    Supports parallel execution - can handle 20+ simultaneous starts.
+    
+    Args:
+        request: Contains client_id, meet_code, meeting_language, consultant_id
+        
+    Returns:
+        dict with ok, status, meet_code, ws_port, chat_port
+        
+    Raises:
+        HTTPException: If servers fail to start or meet_code is invalid
     """
+    meet_code = None
+    task = None
+    
     try:
-        print(request)
         meet_code = request.meet_code.strip()
+        
+        if not meet_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Body must contain a non-empty meet code"
+            )
+        
+        # Check if session already exists
+        async with _session_tasks_lock:
+            if meet_code in _session_tasks and not _session_tasks[meet_code].done():
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Recording for {meet_code} is already running"
+                )
+        
+        # Find free ports
         ws_port = await facade.find_free_port()
         chat_port = await facade.find_free_port()
         
+        # Ensure different ports
         while chat_port == ws_port:
             chat_port = await facade.find_free_port()
-            
-        if not meet_code:
-            raise HTTPException(400, detail="Body must contain a non-empty meet code")
-
-        #if meet_code in _session_tasks:
-            #raise HTTPException(409, detail=f"Recording for {meet_code} is already running")
-
-        # fire-and-forget recorder; store task so we can await / cancel later
-        _session_tasks[meet_code] = asyncio.create_task(
-            facade.run_google_meet_recording_api(request.client_id, meet_code, request.meeting_language, ws_port, chat_port,request.consultant_id)
+        
+        facade.logger.info(
+            f"📍 Starting session for {meet_code} with ports: "
+            f"ws={ws_port}, chat={chat_port}"
         )
+        
+        # Create background task for this session
+        task = asyncio.create_task(
+            facade.run_google_meet_recording_api(
+                request.client_id, 
+                meet_code, 
+                request.meeting_language, 
+                ws_port, 
+                chat_port, 
+                request.consultant_id
+            )
+        )
+        
+        # Register task
+        async with _session_tasks_lock:
+            _session_tasks[meet_code] = task
+        
+        # Get audio server instance and wait for it to be ready
+        audio_server = await facade.get_or_create_audio_server(meet_code)
+        servers_ready = await audio_server.wait_until_ready(timeout=15)
+        
+        if not servers_ready:
+            # Clean up the task if servers didn't start
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            
+            async with _session_tasks_lock:
+                if meet_code in _session_tasks:
+                    del _session_tasks[meet_code]
+            
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"WebSocket servers failed to start within timeout for {meet_code}"
+            )
+        
+        facade.logger.info(
+            f"✅ Session {meet_code} started successfully on ports {ws_port}/{chat_port}"
+        )
+        
+        # Setup task cleanup callback
+        def task_done_callback(t):
+            asyncio.create_task(_cleanup_task(meet_code, t))
+        
+        task.add_done_callback(task_done_callback)
         
         return {
             "ok": True,
@@ -80,13 +159,146 @@ async def start(request: StartMeetingRequest):
             "ws_port": ws_port, 
             "chat_port": chat_port
         }
+        
     except HTTPException:
         raise
     except Exception as e:
+        facade.logger.error(f"❌ Failed to start session {meet_code}: {e}", exc_info=True)
+        
+        # Clean up on any error
+        if task and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        
+        if meet_code:
+            async with _session_tasks_lock:
+                if meet_code in _session_tasks:
+                    del _session_tasks[meet_code]
+        
         return {
             "ok": False,
             "error": str(e)
         }
+
+
+async def _cleanup_task(meet_code: str, task: asyncio.Task):
+    """
+    Cleanup callback for completed tasks.
+    Removes task from registry and logs completion/errors.
+    """
+    async with _session_tasks_lock:
+        if meet_code in _session_tasks:
+            del _session_tasks[meet_code]
+    
+    try:
+        # Check if task raised an exception
+        if task.exception():
+            facade.logger.error(
+                f"❌ Task for {meet_code} failed with exception: {task.exception()}"
+            )
+        else:
+            facade.logger.info(f"✅ Task for {meet_code} completed successfully")
+    except asyncio.CancelledError:
+        facade.logger.info(f"🛑 Task for {meet_code} was cancelled")
+    except Exception as e:
+        facade.logger.error(f"❌ Error in task cleanup for {meet_code}: {e}")
+
+
+@app.post("/stop/{meet_code}")
+async def stop(meet_code: str):
+    """
+    Stop recording session for given meet_code.
+    
+    Args:
+        meet_code: Meeting identifier to stop
+        
+    Returns:
+        dict with ok and status
+    """
+    try:
+        meet_code = meet_code.strip()
+        
+        async with _session_tasks_lock:
+            if meet_code not in _session_tasks:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"No active recording found for {meet_code}"
+                )
+            
+            task = _session_tasks[meet_code]
+        
+        # Get audio server and terminate gracefully
+        audio_server = await facade.get_or_create_audio_server(meet_code)
+        await audio_server.terminate()
+        
+        # Wait for task to complete with timeout
+        try:
+            await asyncio.wait_for(task, timeout=10)
+        except asyncio.TimeoutError:
+            facade.logger.warning(f"Task for {meet_code} did not stop gracefully, cancelling")
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        
+        facade.logger.info(f"✅ Stopped session for {meet_code}")
+        
+        return {
+            "ok": True,
+            "status": "stopped",
+            "meet_code": meet_code
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        facade.logger.error(f"❌ Error stopping session {meet_code}: {e}")
+        return {
+            "ok": False,
+            "error": str(e)
+        }
+
+
+@app.get("/sessions")
+async def list_sessions():
+    """
+    List all active recording sessions.
+    
+    Returns:
+        dict with active sessions and their status
+    """
+    async with _session_tasks_lock:
+        sessions = {
+            meet_code: {
+                "status": "running" if not task.done() else "completed",
+                "done": task.done(),
+                "cancelled": task.cancelled() if task.done() else False
+            }
+            for meet_code, task in _session_tasks.items()
+        }
+    
+    return {
+        "ok": True,
+        "total_sessions": len(sessions),
+        "sessions": sessions
+    }
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    async with _session_tasks_lock:
+        active_sessions = sum(1 for task in _session_tasks.values() if not task.done())
+    
+    return {
+        "status": "healthy",
+        "active_sessions": active_sessions,
+        "total_tracked_sessions": len(_session_tasks)
+    }
 
 @app.post("/terminate")
 async def terminate(meet_code: str = Body(..., embed=False)):
@@ -642,9 +854,23 @@ async def health_check():
     }
 @app.post("/generate_scenario_for_user", response_model=ScenarioResponse, tags=["Scenarios"])
 async def generate_scenario_for_user(request: ScenarioRequest):
-    scenario = await scenario_facade.generate_scenario_for_user(user_email=request.email)
-    await db_facade.update_meet(request.meet_id, MeetUpdate(next_meet_scenario=scenario))
-    return ScenarioResponse(scenario=scenario)
+    scenario = await scenario_facade.generate_scenario_for_user(client_email=request.email)
+    scenario_text = scenario.choices[0].message.content
+    await db_facade.update_meet(request.meet_id, MeetUpdate(next_meet_scenario=scenario_text))
+    return ScenarioResponse(scenario=scenario_text)
+
+@app.post("/generate_scenario_for_user_first", response_model=ScenarioResponseFirst, tags=["Scenarios"])
+async def generate_scenario_for_user_first(request: ScenarioRequestFirst):
+    meet_id = await db_facade.create_meet(MeetCreate(
+            client_id=request.client_id,
+            consultant_id=request.consultant_id,
+        ))
+    
+    person = await db_facade.get_persons_by_client_id(request.client_id)
+    scenario = await scenario_facade.generate_scenario_for_user(client_email=person[0].model_dump().get("email"))
+    scenario_text = scenario.choices[0].message.content
+    await db_facade.update_meet(meet_id, MeetUpdate(next_meet_scenario=scenario_text))
+    return ScenarioResponseFirst(scenario=scenario_text)
 
 # ============ LINKEDIN PARSER ENDPOINTS ============
 

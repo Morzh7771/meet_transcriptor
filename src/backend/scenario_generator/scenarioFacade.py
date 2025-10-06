@@ -1,20 +1,25 @@
 import asyncio
 from typing import Optional, List
-from openai import OpenAI
+from pydantic import BaseModel
 
 from src.backend.scenario_generator.datascrapper import ClientDataReader, FullClientData
 from src.backend.prompts.promptFacade import PromptFacade
 from src.backend.utils.configs import Config
 from src.backend.core.baseFacade import BaseFacade
+from src.backend.utils.logger import CustomLog
+
+
+class ValidationResult(BaseModel):
+    is_valid: bool
+    feedback: str
 
 
 class ScenarioFacade(BaseFacade):
     def __init__(self):
-        self.configs = Config().load_config()
+        super().__init__()
         self.client_reader = ClientDataReader()
         self.prompt_facade = PromptFacade()
-        self.client = OpenAI(api_key=self.configs.openai.API_KEY.get_secret_value())
-        self.chat_model = "gpt-4.1"
+        self.chat_model = "gpt-4o"
 
     def get_prompt_with_context(self, template_name: str, current_user: FullClientData, similar_users: list) -> str:
         try:
@@ -28,18 +33,31 @@ class ScenarioFacade(BaseFacade):
             raise Exception(f"Error generating prompt using PromptFacade: {str(e)}")
 
     async def call_llm_for_scenario(self, prompt: str) -> str:
-        """Use OpenAI 1.x client; wrap sync call in a worker thread for asyncio compatibility."""
-
-        llm_scenario_template = eval(PromptFacade.get_prompt("llm_scenario_template", prompt=prompt))
-        def _call():
-            return self.client.chat.completions.create(
+        """Используем BaseFacade.completion для вызова LLM"""
+        try:
+            # Получаем шаблон промпта (должен быть список словарей с 'role' и 'content')
+            llm_scenario_template_str = self.prompt_facade.get_prompt("llm_scenario_template", prompt=prompt)
+            
+            # Безопасный eval или лучше использовать json.loads если это JSON
+            messages = eval(llm_scenario_template_str)
+            
+            # Проверяем структуру messages
+            if not isinstance(messages, list):
+                raise ValueError("llm_scenario_template должен возвращать список сообщений")
+            
+            # Вызываем через BaseFacade.completion
+            response = await self.completion(
                 model=self.chat_model,
-                messages=llm_scenario_template,
+                messages=messages,
                 temperature=0.3,
                 max_tokens=2500,
             )
-        response = await asyncio.to_thread(_call)
-        return response.choices[0].message.content.strip()
+            
+            return response
+            
+        except Exception as e:
+            self.logger.error(f"Error calling LLM for scenario: {str(e)}")
+            raise
 
     async def generate_scenario_for_user(self, client_email: str, template_name: str = "scenario", similar_count: int = 3) -> str:
         try:
@@ -56,6 +74,7 @@ class ScenarioFacade(BaseFacade):
             else:
                 similar_clients = [item["client_data"] for item in similar_data.get("similar_clients", [])]
                 self.logger.info(f"Founded {len(similar_clients)} similar users")
+            
             self.logger.info(similar_clients)
             self.logger.info(f"Generating prompt with template: {template_name}")
             prompt = self.get_prompt_with_context(template_name, current_client, similar_clients)
@@ -68,36 +87,29 @@ class ScenarioFacade(BaseFacade):
             self.logger.error(f"Error generating script: {str(e)}")
             raise
 
-#--------------------------VALIDATION--------------------------
+    # --------------------------VALIDATION--------------------------
 
     async def validate_chunk_against_scenario(self, scenario: str, chunk_text: str) -> str:
-
-        validate_scenario_template = eval(PromptFacade.get_prompt(
-            "validate_scenario_template",
-              scenario=scenario, 
-              chunk_text=chunk_text
-        ))
         try:
-            def _call():
-                return self.client.chat.completions.create(
-                    model=self.chat_model,
-                    messages=validate_scenario_template,
-                    temperature=0.3,
-                    max_tokens=500,
-                )
-            response = await asyncio.to_thread(_call)
-            return response.choices[0].message.content.strip()
-        
+            # Получаем шаблон промпта
+            validate_scenario_template_str = self.prompt_facade.get_prompt(
+                "validate_scenario_template",
+                scenario=scenario,
+                chunk_text=chunk_text
+            )
+            
+            messages = eval(validate_scenario_template_str)
+            
+            # Вызываем через BaseFacade.completion
+            response = await self.completion(
+                model=self.chat_model,
+                messages=messages,
+                temperature=0.3,
+                max_tokens=500,
+            )
+            
+            return response
+            
         except Exception as e:
             self.logger.error(f"Error validating chunk: {str(e)}")
             raise
-    
-
-# async def generate_scenario_for_email(user_email: str, template_name: str = "scenario") -> str:
-#     api_key = os.getenv("OPENAI_API_KEY")
-#     if not api_key:
-#         raise Exception("The environment variable is not set. OPENAI_API_KEY")
-#     generator = ScenarioGenerator(api_key)
-#     return await generator.generate_scenario_for_user(user_email, template_name)
-
- 

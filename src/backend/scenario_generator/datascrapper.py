@@ -4,6 +4,7 @@ import asyncio
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, asdict, field
+from src.backend.utils.logger import CustomLog
 
 # Ensure project root on sys.path
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
@@ -53,6 +54,7 @@ class ClientDataReader(BaseFacade):
     def __init__(self):
         self.db = DBFacade()
         vector_db = VectorDBFacade()
+        self.logger = CustomLog()
         self.vector_similarity = vector_db.client_profiles
  
 

@@ -3,9 +3,6 @@ from typing import Dict, Any, List
 from src.backend.vector_db.qdrant_Facade import VectorDBFacade
 from src.backend.rag_law.llm_filter_law import LLMFilter
 from src.backend.rag_law.search_law import SearchLawService
- 
-from src.backend.rag_law.search_law import SearchLawService
-
 class LawRAGFacade:
     def __init__(self):
         vector_db = VectorDBFacade()
