@@ -82,7 +82,7 @@ async def debug_single_scrape():
         
         if result.success:
             print(f"\n📄 Content preview (first 500 chars):")
-            print(result.markdown[:500])
+            print(result.markdown)
         else:
             print(f"\n❌ Scraping failed")
             
@@ -122,7 +122,7 @@ async def debug_single_scrape():
         if result.success:
             print(f"\n📊 Token count: {scraper._calculate_token_count(result.markdown)}")
             print(f"\n📄 First 300 chars of content:")
-            print(result.markdown[:300])
+            print(result.markdown)
             
     except Exception as e:
         print(f"💥 Exception caught: {type(e).__name__}: {str(e)}")

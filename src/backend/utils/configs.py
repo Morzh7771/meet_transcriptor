@@ -87,7 +87,7 @@ class Config(BaseSettings):
     vectordb: VectorDBConfig = Field(default_factory=VectorDBConfig)
     linkedinparser: LinkedinParserConfig = Field(default_factory=LinkedinParserConfig)
     lawparser: LawParserConfig = Field(default_factory=LawParserConfig)
-    #searcher: GoogleSearchConfig = Field(default_factory=GoogleSearchConfig)
+    searcher: GoogleSearchConfig = Field(default_factory=GoogleSearchConfig)
     filter: FilterConfig = Field(default_factory=FilterConfig)
     scraper: ScrapperConfig = Field(default_factory=ScrapperConfig)
     account: AccountConfig = Field(default_factory=AccountConfig)

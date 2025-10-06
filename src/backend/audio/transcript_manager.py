@@ -110,8 +110,8 @@ class TranscriptManager(BaseFacade):
         return merged_speaker_ranges
 
     def find_active_speaker(self, seg_start, seg_end, speaker_ranges):
-        TOLERANCE_MS = 150
-        best_speaker = "Unknown"
+        TOLERANCE_MS = 500
+        best_speaker = ""
         best_overlap = 0
 
         for r in speaker_ranges:
@@ -330,7 +330,7 @@ class TranscriptManager(BaseFacade):
             tags = summary_and_tags.tags
             notes = await self.meeting_analizer.generate_notes(full_transcript_text)
             notes = notes.notes
-            action_items = await self.meeting_analizer.generate_action_items(summary, meet_id)
+            action_items = await self.meeting_analizer.generate_action_items(full_transcript_text, meet_id)
             action_items = action_items
             self.logger.info(f"The summary is: {summary}\nThe overview is: {overview}\nThe tags are: {tags}\nThe notes are: {notes}\nThe action_items are: {action_items}")
             
