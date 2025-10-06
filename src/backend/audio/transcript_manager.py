@@ -236,7 +236,7 @@ class TranscriptManager(BaseFacade):
             else:
                 self.logger.warning("No transcript lines generated for this chunk")
 
-            if self.full_transcript_buffer and len(self.full_transcript_buffer) % 1 == 0: # changed from 6 to 3
+            if self.full_transcript_buffer and len(self.full_transcript_buffer) % 6 == 0: # changed from 6 to 3
 
                 meets = await self.db.get_meets(client_id=client_id, consultant_id=consultant_id)
 

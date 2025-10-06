@@ -41,6 +41,9 @@ class SlmResponse(BaseModel):
         description="Brief description of the violation"
     )
 class llmResponse(BaseModel):
+    has_violation: bool = Field(
+        description="True if legal violation detected, False if all clear"
+    )
     response: str = Field(
         ...,
         description="Detailed analysis of the violation with recommendations"

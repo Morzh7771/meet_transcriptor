@@ -325,7 +325,7 @@ async def terminate(meet_code: str = Body(..., embed=False)):
 
 @app.post("/getAllMeets")
 async def getAllMeets():
-    result = await db.get_all_meets()
+    result = await db_facade.get_all_meets()
     return result
 
 @app.post("/rag_chat")
@@ -348,7 +348,7 @@ async def meetBotChat(request: MeetBotChat):
 
 @app.post("/getChatTopics")
 async def getChatTopics(request: GetChatTopics):
-    res = await db.get_all_meet_topics(request.meet_id)
+    res = await db_facade.get_all_meet_topics(request.meet_id)
     return res
 
 

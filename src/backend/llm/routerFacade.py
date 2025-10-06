@@ -65,8 +65,8 @@ class RouterAgent(BaseFacade):
                 self.logger.info(f"LLM Response: {detailed_analysis}")
                 
                 result = {
-                    "has_violation": True,
-                    "detailed_analysis": detailed_analysis
+                    "has_violation": detailed_analysis.has_violation,
+                    "detailed_analysis": detailed_analysis.response
                 }
                 self.logger.info(f"Returning result with violation: {result}")
                 return result
@@ -183,13 +183,6 @@ class RouterAgent(BaseFacade):
                 "has_deviation": has_deviation,
                 "deviation_details": result_text if has_deviation else None,
             }
-            
-            if has_deviation:
-                self.logger.warning(f"Scenario deviation detected: {result_text}")
-            else:
-                self.logger.debug(f"Consultant is following the scenario in meeting")
-            
-            return result
             
         except Exception as e:
             self.logger.error(f"Scenario validation error for meeting: {e}", exc_info=True)
