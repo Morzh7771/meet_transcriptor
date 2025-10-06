@@ -4,7 +4,6 @@
   const meetCodeRegex = /^\/([a-z]{3}-[a-z]{4}-[a-z]{3})$/i;
   if (!meetCodeRegex.test(window.location.pathname)) return;
 
-  // Extract meet code from URL
   const meetCodeMatch = window.location.pathname.match(meetCodeRegex);
   const MEET_CODE = meetCodeMatch ? meetCodeMatch[1] : null;
   
@@ -17,7 +16,7 @@
     return;
   }
   
-  const ROOM = MEET_CODE; // Use meet code as room ID
+  const ROOM = MEET_CODE;
   console.log("[content] Using ROOM:", ROOM);
 
   let panel, startStopBtn, statusEl, transcriptEl;
@@ -26,8 +25,7 @@
   let inMeeting = false;
   let lastMuted = null;
 
-  // Simple state: participant -> true/false (speaking/silent)
-  let currentSpeakerStates = {}; // {"User1": true, "User2": false, ...}
+  let currentSpeakerStates = {};
 
   const addTranscript = (text) => {
     if (transcriptEl && text) {
@@ -36,7 +34,6 @@
     }
   };
 
-  // Add violation to top of transcript - SIMPLE VERSION
   const addViolation = (violationMessage) => {
     if (!transcriptEl) {
       console.warn("[content] transcriptEl not available");
@@ -54,17 +51,21 @@
     console.log("[content] Transcript updated, new length:", transcriptEl.value.length);
   };
 
-  // SIMPLE function: scan all participants and their speaking state
+  // UPDATED: New selector for audio indicator circles
   const scanAndUpdateSpeakers = () => {
-    const rings = document.querySelectorAll('[jscontroller="YQvg8b"]');
+    // Find all audio indicator elements by their specific classes
+    // The audio circles have jscontroller="YQvg8b" and classes starting with "DYfzY"
+    const audioIndicators = document.querySelectorAll('[jscontroller="YQvg8b"].DYfzY');
     const newSpeakerStates = {};
     
-    // Go through all participants
-    Array.from(rings).forEach((ring) => {
-      const participantName = findParticipantName(ring);
-      const isSpeakingNow = isSpeaking(ring);
+    console.log("[content] Found audio indicators:", audioIndicators.length);
+    
+    // Go through all audio indicators
+    Array.from(audioIndicators).forEach((indicator) => {
+      const participantName = findParticipantName(indicator);
+      const isSpeakingNow = isSpeaking(indicator);
       
-      // Remember current state of participant
+      // Store current state
       newSpeakerStates[participantName] = isSpeakingNow;
     });
 
@@ -72,20 +73,15 @@
     const statesChanged = !areStatesEqual(currentSpeakerStates, newSpeakerStates);
     
     if (statesChanged) {
-      // Log changes
       logSpeakerChanges(currentSpeakerStates, newSpeakerStates);
-      
-      // Update state
       currentSpeakerStates = { ...newSpeakerStates };
       
-      // Send new state if recording
       if (isRecording) {
         sendSpeakerStates();
       }
     }
   };
 
-  // Function to compare states
   const areStatesEqual = (oldStates, newStates) => {
     const oldKeys = Object.keys(oldStates);
     const newKeys = Object.keys(newStates);
@@ -100,7 +96,6 @@
     return true;
   };
 
-  // Log changes for debugging
   const logSpeakerChanges = (oldStates, newStates) => {
     const time = new Date().toLocaleTimeString();
     
@@ -116,7 +111,6 @@
       }
     }
     
-    // Show current state of all speakers
     const currentSpeakers = Object.entries(newStates)
       .filter(([name, speaking]) => speaking)
       .map(([name]) => name);
@@ -126,14 +120,13 @@
     }
   };
 
-  // Send current state of all participants - FIXED field names for backend
   const sendSpeakerStates = () => {
     console.log("[content] Sending speaker states:", currentSpeakerStates);
     
     sendExtMessage({ 
       type: "update-speakers", 
-      speakerStates: currentSpeakerStates, // simple object {participant: true/false}
-      time: Date.now() // Changed from timestamp to time to match backend expectation
+      speakerStates: currentSpeakerStates,
+      time: Date.now()
     });
   };
 
@@ -150,7 +143,6 @@
     if (startStopBtn) startStopBtn.textContent = rec ? "Stop" : "Start";
     setStatus(rec ? "PCM Streaming..." : "Idle");
 
-    // Disable/enable ID inputs during recording
     if (clientIdInput) clientIdInput.disabled = rec;
     if (consultantIdInput) consultantIdInput.disabled = rec;
   };
@@ -173,10 +165,8 @@
 
     const title = el("div", { textContent: "Qontext Audio Transcriptor (PCM Stream)" }, { fontWeight: "600", marginBottom: "6px" });
     
-    // Create input fields container
     const inputsContainer = el("div", {}, { marginTop: "8px", marginBottom: "8px" });
     
-    // Client ID input
     const clientIdLabel = el("label", { textContent: "Client ID:" }, { 
       display: "block", 
       fontSize: "12px", 
@@ -199,7 +189,6 @@
       fontFamily: "system-ui,Arial,sans-serif",
     });
     
-    // Consultant ID input
     const consultantIdLabel = el("label", { textContent: "Consultant ID:" }, { 
       display: "block", 
       fontSize: "12px", 
@@ -222,7 +211,6 @@
       fontFamily: "system-ui,Arial,sans-serif",
     });
     
-    // Save IDs to localStorage on input
     clientIdInput.addEventListener("input", (e) => {
       localStorage.setItem("qontext_client_id", e.target.value);
     });
@@ -272,7 +260,6 @@
   const handleStart = async () => {
     console.log("[content] Start PCM streaming button clicked");
 
-    // Validate IDs
     const clientId = clientIdInput?.value?.trim();
     const consultantId = consultantIdInput?.value?.trim();
     
@@ -306,10 +293,7 @@
       sendExtMessage({ type: "meet-mic-state", muted: currentMuted });
     }
 
-    // Immediately send current state
     scanAndUpdateSpeakers();
-
-    // Start constant scanning every 100ms
     speakerMonitorInterval = setInterval(scanAndUpdateSpeakers, 100);
     startStopBtn.disabled = false;
   };
@@ -342,12 +326,10 @@
     } else {
       console.log("[content] Left meeting, destroying panel");
       destroyPanel();
-      // Reset state
       currentSpeakerStates = {};
     }
   };
 
-  // Listen for transcript and violation messages
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     console.log("[content] Received message type:", msg?.type, "Full message:", msg);
     
@@ -369,7 +351,7 @@
     }
     
     sendResponse({ ok: true });
-    return true; // Keep message channel open for async response
+    return true;
   });
 
   setTimeout(checkMeetingState, 1000);

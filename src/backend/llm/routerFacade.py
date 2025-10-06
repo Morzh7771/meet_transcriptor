@@ -162,14 +162,21 @@ class RouterAgent(BaseFacade):
     async def validate_chunk(self, chunk_text: str, scenario: str) -> Dict[str, Any]:
         try:
             
-            result_text = await self.scenario_facade.validate_chunk_against_scenario(
+            result = await self.scenario_facade.validate_chunk_against_scenario(
                 scenario=scenario,
                 chunk_text=chunk_text
             )
             
+            if hasattr(result, 'choices'):
+                result_text = result.choices[0].message.content
+            elif hasattr(result, 'content'):
+                result_text = result.content
+            else:
+                result_text = str(result)
+            
             has_deviation = bool(result_text and result_text.strip())
             
-            result = {
+            return {
                 "has_deviation": has_deviation,
                 "deviation_details": result_text if has_deviation else None,
             }
