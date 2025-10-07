@@ -18,15 +18,27 @@ class MeetBotChat(BaseModel):
 class GetChatTopics(BaseModel):
     meet_id: str
 
+class EmploymentInfo(BaseModel):
+    company_name: str
+    job_title: str
+    job_description: str
+    start_date: str | None = None
+    end_date: str | None = None
+
+class EducationInfo(BaseModel):
+    university_name: str
+    degree: str
+    field_of_study: str
+    start_date: str | None = None
+    end_date: str | None = None
+
 class LinkedInParseRequest(BaseModel):
     linkedin_url: str
-    client_id: str
+
 class LinkedInParseResponse(BaseModel):
     message: str
-    client_id: str
-    employments_added: int
-    educations_added: int
-    companies_info: List[dict]
+    employments: List[EmploymentInfo]
+    educations: List[EducationInfo]
     
     
 class ScenarioRequest(BaseModel):
@@ -42,7 +54,7 @@ class ScenarioRequestFirst(BaseModel):
 
 class ScenarioResponseFirst(BaseModel):
     scenario: str
-    
+    meet_id: str
 class RAGChat(BaseModel):
     message: str
     chat_id: Optional[str] = None
