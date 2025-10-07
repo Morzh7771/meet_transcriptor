@@ -26,8 +26,6 @@ class BaseFacade:
         response = await self.client.chat.completions.create(
             model=model,
             messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
             response_model=output_model
         )
         return response

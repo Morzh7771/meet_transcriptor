@@ -17,6 +17,7 @@ scenario_facade = ScenarioFacade()
 db_facade = DBFacade()
 facade = Facade()
 vector_db = VectorDBFacade()
+linkedin_parser = LinkedInParser()
 
 # Keep track of recorder coroutines keyed by meet-code
 # This allows parallel execution of multiple sessions
@@ -870,67 +871,71 @@ async def generate_scenario_for_user_first(request: ScenarioRequestFirst):
     scenario = await scenario_facade.generate_scenario_for_user(client_email=person[0].model_dump().get("email"))
     scenario_text = scenario.choices[0].message.content
     await db_facade.update_meet(meet_id, MeetUpdate(next_meet_scenario=scenario_text))
-    return ScenarioResponseFirst(scenario=scenario_text)
+    return ScenarioResponseFirst(scenario=scenario_text,meet_id=meet_id)
 
 # ============ LINKEDIN PARSER ENDPOINTS ============
-
 @app.post("/parse-linkedin", response_model=LinkedInParseResponse, tags=["LinkedIn"])
 async def parse_linkedin_profile(request: LinkedInParseRequest):
-    linkedin_parser = LinkedInParser(request.linkedin_url)
+    """
+    Parse a LinkedIn profile and extract employment and education information.
+    
+    Args:
+        request: LinkedInParseRequest containing the linkedin_url
+        
+    Returns:
+        LinkedInParseResponse with parsed employments and educations
+        
+    Raises:
+        HTTPException: If parsing fails
+    """
     try:
-        client = await db_facade.get_client_by_id(request.client_id)
-        if not client:
-            raise HTTPException(status_code=404, detail=f"Client with ID {request.client_id} not found")
+        # Parse the LinkedIn profile
+        parsed_data = await linkedin_parser.parse_user(request.linkedin_url)
         
-        parsed_data = linkedin_parser.parse_user()
+        employments = []
+        educations = []
         
-        employments_added = 0
-        educations_added = 0
-        
+        # Process employment data
         for company in parsed_data.get("companies", []):
             try:
-                employment_data = ClientEmploymentCreate(
-                    client_id=request.client_id,
+                employment = EmploymentInfo(
                     company_name=company.get("name", "Unknown"),
-                    job_title="", 
+                    job_title=company.get("title", ""),
                     job_description=company.get("description", ""),
-                    hire_date=datetime.now(),
-                    pay_frequency="",
-                    year_funds=0.0,
-                    add_funds=0.0
+                    start_date=company.get("start_date"),
+                    end_date=company.get("end_date")
                 )
-                await db_facade.create_client_employment(employment_data)
-                employments_added += 1
+                employments.append(employment)
             except Exception as e:
-                print(f"Error adding employment for {company.get('name')}: {e}")
+                print(f"Error processing employment for {company.get('name')}: {e}")
         
+        # Process education data
         for edu in parsed_data.get("educations", []):
             try:
                 university = edu.get("university") or edu.get("school") or "Unknown"
-                degree = edu.get("degree") or ""
-                field = edu.get("field") or edu.get("fields_of_study") or ""
+                degree = edu.get("degree") or None
+                field = edu.get("field") or edu.get("fields_of_study") or None
                 start_year = edu.get("start") or edu.get("start_year")
                 end_year = edu.get("end") or edu.get("end_year")
-                start_date = datetime(int(start_year), 1, 1) if start_year else None
-                end_date = datetime(int(end_year), 12, 31) if end_year else None
-                education_data = ClientEducationCreate(
-                    client_id=request.client_id,
-                    started_on=start_date,
-                    ended_on=end_date,
-                    field_of_study=field,
+                
+                start_date = f"{start_year}-01-01" if start_year else None
+                end_date = f"{end_year}-12-31" if end_year else None
+                
+                education = EducationInfo(
+                    university_name=university,
                     degree=degree,
-                    university_name=university
+                    field_of_study=field,
+                    start_date=start_date,
+                    end_date=end_date
                 )
-                await db_facade.create_client_education(education_data)
-                educations_added += 1
+                educations.append(education)
             except Exception as e:
-                print(f"Error adding education for {edu}: {e}")
+                print(f"Error processing education for {edu}: {e}")
+        
         return LinkedInParseResponse(
             message="LinkedIn profile parsed successfully",
-            client_id=request.client_id,
-            employments_added=employments_added,
-            educations_added=educations_added,
-            companies_info=parsed_data.get("companies", [])
+            employments=employments,
+            educations=educations
         )
         
     except HTTPException:
