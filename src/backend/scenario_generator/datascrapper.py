@@ -246,6 +246,7 @@ class ClientDataReader(BaseFacade):
     def _format_client_for_context(self, client_data: FullClientData, is_target: bool = False) -> str:
         """
         Format a client's data for LLM context. Hides email for the target client.
+        Includes meeting history with next_meet_scenario if available.
         """
         p = client_data.person
         c = client_data.client
@@ -329,16 +330,47 @@ class ClientDataReader(BaseFacade):
                 if name or rel:
                     out.append(f"  - {name} ({rel})" if rel else f"  - {name}")
 
-        # Meetings
+        # Meetings - MODIFIED TO INCLUDE ALL MEETINGS WITH next_meet_scenario
         if client_data.meetings:
             if is_target:
-                out.append("Recent meetings:")
-                for m in client_data.meetings[-3:]:
+                # For target client: show recent meetings with full details
+                out.append("Meeting history:")
+                # Show last 3 meetings or all if less than 3
+                recent_meetings = client_data.meetings[-3:] if len(client_data.meetings) > 3 else client_data.meetings
+                for m in recent_meetings:
                     date = getattr(m, "meeting_date", None)
                     purpose = getattr(m, "purpose", None) or "Not specified"
+                    next_scenario = getattr(m, "next_meet_scenario", None)
+                    
                     out.append(f"  - {date}: {purpose}")
+                    if next_scenario:
+                        out.append(f"    Next meeting scenario: {next_scenario}")
+                
+                # Indicate if there are more meetings
+                if len(client_data.meetings) > 3:
+                    out.append(f"  (Total meetings: {len(client_data.meetings)})")
             else:
-                out.append(f"Meetings count: {len(client_data.meetings)}")
+                # For similar clients: show meeting count and scenarios if they exist
+                out.append(f"Meeting history (total: {len(client_data.meetings)}):")
+                # Show last 2-3 meetings with scenarios if available
+                recent_meetings = client_data.meetings[-3:] if len(client_data.meetings) > 3 else client_data.meetings
+                for m in recent_meetings:
+                    date = getattr(m, "meeting_date", None)
+                    purpose = getattr(m, "purpose", None)
+                    next_scenario = getattr(m, "next_meet_scenario", None)
+                    
+                    if date or purpose or next_scenario:
+                        meeting_info = []
+                        if date:
+                            meeting_info.append(f"Date: {date}")
+                        if purpose:
+                            meeting_info.append(f"Purpose: {purpose}")
+                        
+                        if meeting_info:
+                            out.append(f"  - {', '.join(meeting_info)}")
+                        
+                        if next_scenario:
+                            out.append(f"    Next meeting scenario: {next_scenario}")
 
         return "\n".join(out)
 
