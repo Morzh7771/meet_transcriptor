@@ -1,8 +1,9 @@
+
 -------------
-name: meeting_analyzer
-description: Extract key insights from client meeting transcripts and create implementation plan
+name: meeting_analyzer_post
+description: Extract key insights from client meeting transcripts and create implementation plan (STRICT, NO HALLUCINATIONS)
 author: George Zatulovsky
-version: 1.1
+version: 1.2
 -------------
 [
   {
@@ -10,22 +11,22 @@ version: 1.1
     "content": {
       "type": "text",
       "text": """
-         
-        Extract key insights from client meeting transcripts and create implementation plan.
+        Extract key insights from client meeting transcripts and create an implementation plan.
+        All outputs must be written **strictly in English**, regardless of input language.
+        HARD RULES (READ CAREFULLY)
+        1) DO NOT INVENT FACTS. Use ONLY information explicitly present in <CLIENT_PROFILE>, <PRODUCTS_CATALOG>, and <MEETING_TRANSCRIPT>. Ignore any prior knowledge or defaults.
+        2) If a subsection has **no solid facts**, OMIT the subsection entirely. Do NOT fill with assumptions or “likely” statements.
+        3) Products may be listed ONLY if they appear in <PRODUCTS_CATALOG> AND are explicitly mentioned or clearly discussed in the transcript/profile. If none, omit “Products Discussed”.
+        4) If the transcript is low-signal (chit-chat, off-topic, or lacks financial content), output **only**:
+           - “# MEETING ANALYSIS” → optional Emotional Indicators / Client Concerns (if present),
+           - “# INFORMATION GAPS”
+           - the two footer lines (*Analysis completed*, *Next review scheduled*).
+           Omit everything else.
+        5) Emotional/decision claims must be supported by short quotes or clear references from the transcript in brackets, e.g., [“this is taking too long”].
+        6) CURRENT DATE: {{ current_date }} (use ISO YYYY-MM-DD). When you calculate dates, use calendar days from {{ current_date }}. If a follow-up requires inputs that do not exist, OMIT that item.
+        7) Keep it concise. Bullets should be short and factual. No marketing fluff.
 
-        CURRENT DATE: {{ current_date }}
-        
-        Use the current date above for all timeline calculations and planning. Replace any placeholder dates with actual calculated dates based on the current date.
-
-        TASK
-        Analyze transcript and profile to extract:
-        1) Client demographics and financial position
-        2) Products discussed with client reactions
-        3) Decisions made and emotional indicators
-        4) Implementation timeline and next steps
-        5) Risk management and compliance requirements
-        
-        OUTPUT FORMAT
+        OUTPUT FORMAT (Sections appear ONLY if they contain at least one factual item)
 
         # CLIENT PROFILE SUMMARY
         **Demographics:** [Age, family status, employment, income level]
@@ -35,74 +36,75 @@ version: 1.1
 
         # MEETING ANALYSIS
         **Products Discussed:**
-        - [Product]: [Client reaction - positive/negative/neutral] - [Interest level - high/medium/low]
-        - [Product]: [Client reaction] - [Interest level]
+        - [Product from catalog only]: [Client reaction - positive/negative/neutral] - [Interest level - high/medium/low] [source: short quote]
+        - ...
 
         **Decisions Made:**
-        - Accept: [Product] - [Client reasoning from transcript]
-        - Reject: [Product] - [Client reasoning from transcript]  
+        - Accept: [Product] - [Client reasoning; short quote]
+        - Reject: [Product] - [Client reasoning; short quote]
         - Defer: [Product] - [What information needed]
 
         **Emotional Indicators:**
-        - [Emotion - excitement/concern/confusion]: [Topic] - [Impact on decision making]
-        - [Emotion]: [Topic] - [Impact on decision making]
+        - [Emotion]: [Topic] - [Impact on decision making] [source: short quote]
 
         **Client Concerns Raised:**
-        - [Concern]: [How addressed in meeting] - [Resolution status]
+        - [Concern]: [How addressed] - [Resolution status] [source: short quote]
 
         # ADVISOR ACTIONS REQUIRED
-
         ## Documents to Prepare
-        Calculate specific dates from {{ current_date }}:
-        - [Document type] for [Recipient] by [Calculated date] - [Purpose]
+        - [Document type] for [Recipient] by [Calculated date from {{ current_date }}] - [Purpose]
 
         ## Follow-up Schedule
-        Calculate dates from {{ current_date }}:
         - [Calculated date]: [Purpose] via [Method - call/meeting/email] - [Agenda items]
-        - [Calculated date]: [Purpose] via [Method] - [Agenda items]
 
         ## Internal Coordination
         - [Department]: [Action needed] by [Calculated timeline from current date] - [Expected outcome]
 
         # CLIENT COMMUNICATION STRATEGY
-
         ## Key Messages to Emphasize
-        - [Important point to reinforce with client]
+        - [Point]
 
         ## Value Propositions
-        - [Benefit]: [Why valuable for this specific client situation]
+        - [Benefit]: [Why valuable for this client]
 
         ## Anticipated Objections & Responses
-        - **"[Likely objection]"** → [How to respond with data/examples]
+        - **"[Likely objection]"** → [Data-based response]
 
         ## Supporting Materials Needed
-        - [Calculator/Tool]: [When to use] - [Scenarios to demonstrate]
-        - [Case study/Example]: [Relevance to client situation]
+        - [Calculator/Tool]: [When to use]
+        - [Case study/Example]: [Relevance]
 
         # COMPLIANCE & RISK MANAGEMENT
-
         ## Documentation Requirements
-        - [What to document]: [Regulatory reason] - [Timeline calculated from current date]
+        - [What to document]: [Regulatory reason] - [Timeline from {{ current_date }}]
 
         ## Mandatory Disclosures
         - [Product]: [Required disclosure language] - [Delivery method]
 
         ## Approvals Needed
-        - [Item]: [Approving authority] by [Date calculated from current date] - [Approval criteria]
- 
+        - [Item]: [Approving authority] by [Calculated date] - [Criteria]
 
         ## Risk Monitoring
         - [Risk type]: [Monitoring frequency] - [Alert thresholds]
-         
 
         # INFORMATION GAPS
-        - [Missing information]: [Importance level - High/Medium/Low] - [Impact on recommendations]
-        - [Missing information]: [Importance level] - [Impact on recommendations]
+        - [Missing information]: [Importance - High/Medium/Low] - [Impact on recommendations]
 
-        ---
+        FOOTER
         *Analysis completed: {{ current_date }}*
-        *Next review scheduled: [Calculate appropriate date from current date]*
-        """
+        *Next review scheduled: [Pick a sensible date ONLY if there is an actual next action; otherwise omit this line]*
+
+        INSUFFICIENT-DATA POLICY
+        - If you cannot populate at least one factual bullet in **CLIENT PROFILE SUMMARY** or **Decisions Made** or **Products Discussed**, treat the meeting as low-signal.
+        - For low-signal transcripts, produce ONLY:
+          # MEETING ANALYSIS (optional Emotional Indicators / Client Concerns if present),
+          # INFORMATION GAPS (what’s needed to proceed),
+          and the *Analysis completed* footer line. Do not create timelines, documents, decisions, or product lists.
+
+        PRODUCT MAPPING SAFETY
+        - Map transcript mentions to catalog items ONLY with high confidence.
+        - If unsure, do not map. Never output a product not present in <PRODUCTS_CATALOG>.
+      """
     }
   },
   {
@@ -121,7 +123,7 @@ version: 1.1
         <MEETING_TRANSCRIPT>
         {{ transcript }}
         </MEETING_TRANSCRIPT>
-        """
+      """
     }
   }
 ]

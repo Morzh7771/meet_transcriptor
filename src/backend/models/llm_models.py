@@ -19,8 +19,10 @@ class SummarizerResponse(BaseModel):
     summary: str = Field(..., description="A summary of the meeting transcript")
     tags: List[str] = Field(..., description="A list of tags related to the meeting transcript")
 
+
 class OverviewResponse(BaseModel):
     overview: List[str] = Field(..., description="A list of key points and outcomes of the meeting")
+    title: str = Field(..., description="Title for meeting transcript (5-10 words)")
 
 class NotesResponse(BaseModel):
     notes: str = Field(..., description="The notes of the meeting transcript")

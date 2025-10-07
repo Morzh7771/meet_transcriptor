@@ -87,3 +87,4 @@ class MeetingAnalizer(BaseFacade):
         #self.logger.info(f"Action items generated: {result}")
         
         return result
+    

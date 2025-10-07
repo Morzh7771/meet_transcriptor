@@ -323,8 +323,9 @@ class TranscriptManager(BaseFacade):
 
             self.logger.info(f"The full transcript returned from llm call is: {full_transcript_text}")
 
-            overview = await self.meeting_analizer.generate_overview(full_transcript_text)
-            overview = overview.overview
+            overview_and_title = await self.meeting_analizer.generate_overview(full_transcript_text)
+            overview = overview_and_title.overview
+            title = overview_and_title.title
             summary_and_tags = await self.meeting_analizer.summarize(full_transcript_text, meet_id)
             summary = summary_and_tags.summary
             tags = summary_and_tags.tags
@@ -332,9 +333,11 @@ class TranscriptManager(BaseFacade):
             notes = notes.notes
             action_items = await self.meeting_analizer.generate_action_items(full_transcript_text, meet_id)
             action_items = action_items
-            self.logger.info(f"The summary is: {summary}\nThe overview is: {overview}\nThe tags are: {tags}\nThe notes are: {notes}\nThe action_items are: {action_items}")
+              
+            self.logger.info(f"The summary is: {summary}\nThe title is: {title}\nThe overview is: {overview}\nThe tags are: {tags}\nThe notes are: {notes}\nThe action_items are: {action_items}")
             
             await self.db.update_meet(meet_id, MeetUpdate(
+                title=title,
                 trascription=full_transcript_text, 
                 overview="\n".join(overview),
                 summary=summary,
