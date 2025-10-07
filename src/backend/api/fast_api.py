@@ -876,12 +876,26 @@ async def generate_scenario_for_user_first(request: ScenarioRequestFirst):
 # ============ LINKEDIN PARSER ENDPOINTS ============
 @app.post("/parse-linkedin", response_model=LinkedInParseResponse, tags=["LinkedIn"])
 async def parse_linkedin_profile(request: LinkedInParseRequest):
+    """
+    Parse a LinkedIn profile and extract employment and education information.
+    
+    Args:
+        request: LinkedInParseRequest containing the linkedin_url
+        
+    Returns:
+        LinkedInParseResponse with parsed employments and educations
+        
+    Raises:
+        HTTPException: If parsing fails
+    """
     try:
+        # Parse the LinkedIn profile
         parsed_data = await linkedin_parser.parse_user(request.linkedin_url)
         
         employments = []
         educations = []
         
+        # Process employment data
         for company in parsed_data.get("companies", []):
             try:
                 employment = EmploymentInfo(
@@ -895,11 +909,12 @@ async def parse_linkedin_profile(request: LinkedInParseRequest):
             except Exception as e:
                 print(f"Error processing employment for {company.get('name')}: {e}")
         
+        # Process education data
         for edu in parsed_data.get("educations", []):
             try:
                 university = edu.get("university") or edu.get("school") or "Unknown"
-                degree = edu.get("degree", "")
-                field = edu.get("field") or edu.get("fields_of_study", "")
+                degree = edu.get("degree") or None
+                field = edu.get("field") or edu.get("fields_of_study") or None
                 start_year = edu.get("start") or edu.get("start_year")
                 end_year = edu.get("end") or edu.get("end_year")
                 

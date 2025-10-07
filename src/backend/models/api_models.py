@@ -27,8 +27,8 @@ class EmploymentInfo(BaseModel):
 
 class EducationInfo(BaseModel):
     university_name: str
-    degree: str
-    field_of_study: str
+    degree: str | None = None  # Make optional
+    field_of_study: str | None = None  # Make optional
     start_date: str | None = None
     end_date: str | None = None
 
