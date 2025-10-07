@@ -19,7 +19,7 @@ class ScenarioFacade(BaseFacade):
         super().__init__()
         self.client_reader = ClientDataReader()
         self.prompt_facade = PromptFacade()
-        self.chat_model = "gpt-4o"
+        self.chat_model = "gpt-5-nano"
 
     def get_prompt_with_context(self, template_name: str, current_user: FullClientData, similar_users: list) -> str:
         try:
