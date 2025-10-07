@@ -19,7 +19,7 @@ class ScenarioFacade(BaseFacade):
         super().__init__()
         self.client_reader = ClientDataReader()
         self.prompt_facade = PromptFacade()
-        self.chat_model = "gpt-5-nano"
+        self.chat_model = "gpt-4.1"
 
     def get_prompt_with_context(self, template_name: str, current_user: FullClientData, similar_users: list) -> str:
         try:
@@ -99,7 +99,7 @@ class ScenarioFacade(BaseFacade):
             )
             
             messages = eval(validate_scenario_template_str)
-            
+         
             # Вызываем через BaseFacade.completion
             response = await self.completion(
                 model=self.chat_model,
