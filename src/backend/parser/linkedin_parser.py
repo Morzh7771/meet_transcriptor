@@ -32,23 +32,47 @@ class LinkedInParser(BaseFacade):
             "url": user_link
         }
 
-        response = requests.post(self.generect_url, headers=self.headers, json=payload)
-        user = response.json()
-
-        return user.get("lead", {})
+        try:
+            response = requests.post(self.generect_url, headers=self.headers, json=payload, timeout=20)
+            response.raise_for_status()
+            data = response.json()
+            lead = data.get("lead") or {}
+            return lead
+        except Exception as e:
+            self.logger.error(f"Error fetching user data for {user_link}: {e}")
+            return {}
 
     def _parse_companies(self, jobs: list) -> list:
-        return [job.get("company_name") for job in jobs if job.get("company_name")]
+        if not jobs or not isinstance(jobs, list):
+            self.logger.warning("Jobs data is empty or invalid")
+            return []
+        
+        companies = [job.get("company_name") for job in jobs if isinstance(job, dict) and job.get("company_name")]
+        
+        if not companies:
+            self.logger.info("No valid company names found in jobs")
+        
+        return companies
 
     def _parse_educations(self, educations: list) -> list:
+        if not isinstance(educations, list) or not educations:
+            self.logger.warning("No education data found or invalid format")
+            return []
+
         education_list = []
         for edu in educations:
+            if not isinstance(edu, dict):
+                continue
+
+            started_on = edu.get("started_on") or {}
+            ended_on = edu.get("ended_on") or {}
+
             education_list.append({
                 "university": edu.get("university_name"),
                 "degree": edu.get("degree"),
                 "field": edu.get("fields_of_study"),
-                "start": edu.get("started_on", {}).get("year"),
-                "end": edu.get("ended_on", {}).get("year")
+                "start": started_on.get("year"),
+                "end": ended_on.get("year")
             })
         return education_list
 
@@ -176,16 +200,26 @@ class LinkedInParser(BaseFacade):
     async def parse_user(self, user_link: str) -> dict:
         lead = self._fetch_user_data(user_link)
 
-        companies = self._parse_companies(lead.get("jobs", []))
-        educations = self._parse_educations(lead.get("educations", []))
+        jobs = lead.get("jobs") or []
+        educations = lead.get("educations") or []
+
+        companies = self._parse_companies(jobs)
+        educations = self._parse_educations(educations)
 
         company_data = []
-        for company in companies:
-            description = await self._get_info_about_company(company)
-            company_data.append({
-                "name": company,
-                "description": description
-            })
+        if companies:
+            for company in companies:
+                try:
+                    description = await self._get_info_about_company(company)
+                except Exception as e:
+                    self.logger.error(f"Error getting info for {company}: {e}")
+                    description = None
+                company_data.append({
+                    "name": company,
+                    "description": description
+                })
+        else:
+            self.logger.info(f"No companies to process for {user_link}")
 
         return {
             "companies": company_data,
