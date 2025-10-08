@@ -127,6 +127,7 @@ class SearchService:
             "meeting_id": lambda v: {"key": key, "match": {"value": v}},
             "client_id": lambda v: {"key": "client_id", "match": {"value": v}},
             "consultant_id": lambda v: {"key": "consultant_id", "match": {"value": v}},
+            "action_items": lambda v: {"key": "action_items", "match": {"text": v}},
             "date_start": lambda v: {"key": "date_start", "range": {"gte": self._normalize_date(v)}},
             "date_end": lambda v: {"key": "date_start", "range": {"lte": self._normalize_date(v, True)}},
             "title": lambda v: {"key": key, "match": {"text": v}},

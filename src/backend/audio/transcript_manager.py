@@ -196,6 +196,7 @@ class TranscriptManager(BaseFacade):
 
 
             chunks_to_analyze = self.last_chunks[-2:] + [full_text]
+          
             context_text = "\n\n".join(chunks_to_analyze)
 
             self.logger.info("=== Before calling router_agent.analyze_transcription ===")
@@ -220,9 +221,10 @@ class TranscriptManager(BaseFacade):
                 if has_violation and self.violation_callback:
                     self.logger.info("Violation detected and callback is set, preparing alert...")
                     violation_alert = {
-                        "res": analysis_result["detailed_analysis"].response
+                        "res": analysis_result.get("detailed_analysis", "")
                     }
                     await self.violation_callback(violation_alert)
+                    chunks_to_analyze.clear()
                     self.logger.info("Violation detected and alert sent")
             else:
                 self.logger.warning("Analysis result is None!")
@@ -236,8 +238,9 @@ class TranscriptManager(BaseFacade):
             else:
                 self.logger.warning("No transcript lines generated for this chunk")
 
-            if self.full_transcript_buffer and len(self.full_transcript_buffer) % 6 == 0: # changed from 6 to 3
-
+            if self.full_transcript_buffer and len(self.full_transcript_buffer) % 3 == 0: # changed from 6 to 3
+                self.logger.info(f"full_transcript_buffer {self.full_transcript_buffer}")
+                self.logger.info(f"full_transcript_buffer {self.full_transcript_buffer}")
                 meets = await self.db.get_meets(client_id=client_id, consultant_id=consultant_id)
 
                 if meets:
@@ -255,6 +258,11 @@ class TranscriptManager(BaseFacade):
                         scenario_to_use
                     )
                     self.logger.info(f"Scenario validation result: {validation_result}")
+                    
+                    violation_alert = validation_result.get("deviation_details")
+                    if violation_alert != None:
+                        await self.violation_callback(violation_alert)
+                    self.full_transcript_buffer.clear() #JZ
                 except Exception as e:
                     self.logger.error(f"Error during scenario validation: {e}")
 
@@ -323,8 +331,9 @@ class TranscriptManager(BaseFacade):
 
             self.logger.info(f"The full transcript returned from llm call is: {full_transcript_text}")
 
-            overview = await self.meeting_analizer.generate_overview(full_transcript_text)
-            overview = overview.overview
+            overview_and_title = await self.meeting_analizer.generate_overview(full_transcript_text)
+            overview = overview_and_title.overview
+            title = overview_and_title.title
             summary_and_tags = await self.meeting_analizer.summarize(full_transcript_text, meet_id)
             summary = summary_and_tags.summary
             tags = summary_and_tags.tags
@@ -332,9 +341,11 @@ class TranscriptManager(BaseFacade):
             notes = notes.notes
             action_items = await self.meeting_analizer.generate_action_items(full_transcript_text, meet_id)
             action_items = action_items
-            self.logger.info(f"The summary is: {summary}\nThe overview is: {overview}\nThe tags are: {tags}\nThe notes are: {notes}\nThe action_items are: {action_items}")
+              
+            self.logger.info(f"The summary is: {summary}\nThe title is: {title}\nThe overview is: {overview}\nThe tags are: {tags}\nThe notes are: {notes}\nThe action_items are: {action_items}")
             
             await self.db.update_meet(meet_id, MeetUpdate(
+                title=title,
                 trascription=full_transcript_text, 
                 overview="\n".join(overview),
                 summary=summary,

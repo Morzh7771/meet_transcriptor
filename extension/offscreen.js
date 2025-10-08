@@ -168,7 +168,7 @@ const startSession = async () => {
       client_id: config.clientId || "d4dee85f-ebf7-46d3-a60f-a562d12bd328",
       consultant_id: config.consultantId || "68f997c0-95d5-4c88-b0c6-c5c13061ec2a",
       meet_code: meetCode,
-      meeting_language: "ru"
+      meeting_language: "en"
     };
 
     const res = await fetch(`${config.apiBase}/start`, {

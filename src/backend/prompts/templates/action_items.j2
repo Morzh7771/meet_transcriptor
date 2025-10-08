@@ -11,7 +11,7 @@ version: 1.0
       "type": "text",
       "text": """
         You extract company product names from a financial meeting summary.
-
+        All outputs must be written **strictly in English**, regardless of input language.
         Inputs:
         - products: a list of canonical product names (exact spellings to output)
         - summary: the meeting summary text
@@ -22,7 +22,7 @@ version: 1.0
         3) If the summary uses a synonym/variant (e.g., "Whole Life Insurance" for "Life Insurance Whole"),
         map it to the exact canonical name from 'products'. Only map when highly confident.
         4) Output ONLY names that exist in 'products', deduplicated, in order of first mention.
-
+        
         Output format:
         Comma-separated string of canonical names with NO extra words or quotes.
         If nothing matches, return an empty string.
