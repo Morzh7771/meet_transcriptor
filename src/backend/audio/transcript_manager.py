@@ -260,7 +260,8 @@ class TranscriptManager(BaseFacade):
                     self.logger.info(f"Scenario validation result: {validation_result}")
                     
                     violation_alert = validation_result.get("deviation_details")
-                    await self.violation_callback(violation_alert)
+                    if violation_alert != None:
+                        await self.violation_callback(violation_alert)
                     self.full_transcript_buffer.clear() #JZ
                 except Exception as e:
                     self.logger.error(f"Error during scenario validation: {e}")
