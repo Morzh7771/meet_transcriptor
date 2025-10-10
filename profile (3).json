@@ -1,0 +1,1537 @@
+{
+  "users": [
+    {
+        "user_id": "profile1",
+        "personal_info": {
+            "full_legal_name": "John Michael Anderson",
+            "first": "John",
+            "middle": "Michael",
+            "last": "Anderson",
+            "dob": "03/15/1976",
+            "sex": "Male",
+            "citizenship": "U.S. citizen",
+            "id_number": "123456789",
+            "id_type": "Driver's License",
+            "country_of_issuance": "United States",
+            "id_issuance_date": "03/20/2020",
+            "id_expiration_date": "03/15/2028",
+            "marital_status": "married",
+            "ssn_or_tin": "123-45-6789",
+            "dependents": [
+                {
+                    "name": "Emily Anderson",
+                    "dob": "08/12/2008",
+                    "relation": "daughter"
+                },
+                {
+                    "name": "Michael Anderson Jr.",
+                    "dob": "05/03/2011",
+                    "relation": "son"
+                }
+            ]
+        },
+        "contact_info": {
+            "email": "john.anderson@email.com",
+            "phone_mobile": "+1-212-555-0123",
+            "phone_alt": "+1-631-555-0456",
+            "address": {
+                "street": "785 Park Avenue, Apt 15B",
+                "city": "New York",
+                "state": "NY",
+                "zip_code": "10021"
+            }
+        },
+        "employment_info": {
+            "company_name": "Goldman Sachs Investment Bank",
+            "job_title": "Senior Vice President, Investment Division",
+            "employee_id": "GS-48291",
+            "hire_date": "06/15/2005",
+            "pay_frequency": "Bi-weekly",
+            "year_funds": 550000,
+            "add_funds": 200000
+        },
+        "plans": [
+            {
+                "plan_type": "Employer 401(k)",
+                "provider": "Fidelity Investments",
+                "plan_id": "GS-401K-2024",
+                "administrator_contact": {
+                    "name": null,
+                    "e_mail": "benefits@gs.com",
+                    "phone": null
+                },
+                "se_context": {
+                    "employer_tax_id": "13-5661851",
+                    "plan_name": "Goldman Sachs Retirement Plan",
+                    "plan_admin": "Fidelity Workplace Services",
+                    "roth_first_year": null
+                }
+            },
+            {
+                "plan_type": "Traditional IRA",
+                "provider": "Charles Schwab",
+                "plan_id": "IRA-7829456",
+                "administrator_contact": {
+                    "name": null,
+                    "e_mail": "john.anderson@schwab.com",
+                    "phone": null
+                },
+                "se_context": {
+                    "employer_tax_id": null,
+                    "plan_name": null,
+                    "plan_admin": null,
+                    "roth_first_year": null
+                }
+            }
+        ],
+        "contribution_settings": {
+            "pretax": 23000,
+            "roth": 7000,
+            "catch_up": null,
+            "auto_escalation": {
+                "enabled": true,
+                "starting_rate": null,
+                "increase_rate": 2,
+                "max_rate": 25,
+                "start_date": null
+            }
+        },
+        "beneficiaries": [
+            {
+                "full_legal_name": "Sarah Elizabeth Anderson",
+                "first": "Sarah",
+                "middle": "Elizabeth",
+                "last": "Anderson",
+                "dob": "11/22/1978",
+                "relationship": "spouse",
+                "email": "sarah.anderson@email.com",
+                "phone_mobile": "+1-212-555-0124",
+                "phone_alt": "+1-631-555-0457",
+                "address": {
+                    "street": "785 Park Avenue, Apt 15B",
+                    "city": "New York",
+                    "state": "NY",
+                    "zip_code": "10021"
+                },
+                "share_prc": 60,
+                "ssn_or_tin": "987-65-4321"
+            },
+            {
+                "full_legal_name": "Anderson Family Trust",
+                "first": "Anderson",
+                "middle": "Family",
+                "last": "Trust",
+                "dob": null,
+                "relationship": "trust",
+                "email": "trustee@andersonfamilytrust.com",
+                "phone_mobile": "+1-212-555-7890",
+                "phone_alt": null,
+                "address": {
+                    "street": "450 Lexington Avenue, Suite 2800",
+                    "city": "New York",
+                    "state": "NY",
+                    "zip_code": "10017"
+                },
+                "share_prc": 40,
+                "ssn_or_tin": null
+            }
+        ],
+        "contingent": [
+            {
+                "name": "Emily Anderson",
+                "share_prc": 50,
+                "relationship": "daughter"
+            },
+            {
+                "name": "Michael Anderson Jr.",
+                "share_prc": 50,
+                "relationship": "son"
+            }
+        ],
+        "agreements": {
+            "data_privacy_consent_at": "01/15/2024",
+            "erisa_disclosures_ack_at": "01/15/2024",
+            "plan_document_read_at": "01/16/2024",
+            "e_delivery_consent_at": "01/15/2024",
+            "arbitration_accepted_at": "01/16/2024",
+            "signed": {
+                "participant": {
+                    "signed_at": "01/18/2024",
+                    "signature_type": "Electronic",
+                    "signature_ref": "DocuSign-JA-20240118-001"
+                },
+                "administrator": {
+                    "signed_at": "01/19/2024",
+                    "admin_name": "Robert Chen",
+                    "admin_title": "Senior Benefits Administrator",
+                    "signature_ref": "DocuSign-RC-20240119-001"
+                }
+            }
+        }
+    },
+
+    {
+        "user_id": "profile2",
+        "personal_info": {
+            "full_legal_name": "Mary Elizabeth Collins",
+            "first": "Mary",
+            "middle": "Elizabeth",
+            "last": "Collins",
+            "dob": "06/12/1990",
+            "sex": "Female",
+            "citizenship": "U.S. citizen",
+            "id_number": "TX9876543",
+            "id_type": "Driver's License",
+            "country_of_issuance": "United States",
+            "id_issuance_date": "07/01/2022",
+            "id_expiration_date": "06/12/2030",
+            "marital_status": "single",
+            "ssn_or_tin": "456-78-9123",
+            "dependents": [
+                {
+                    "name": "Emma Rose Collins",
+                    "dob": "03/15/2019",
+                    "relation": "daughter"
+                }
+            ]
+        },
+        "contact_info": {
+            "email": "mary.collins.rn@gmail.com",
+            "phone_mobile": "+1-512-555-2847",
+            "phone_alt": "+1-512-555-2848",
+            "address": {
+                "street": "4521 South Lamar Blvd, Apt 208",
+                "city": "Austin",
+                "state": "TX",
+                "zip_code": "78745"
+            }
+        },
+        "employment_info": {
+            "company_name": "Austin Family Medical Center",
+            "job_title": "Registered Nurse (RN)",
+            "employee_id": "AFMC-2847",
+            "hire_date": "09/15/2018",
+            "pay_frequency": "Bi-weekly",
+            "year_funds": 68000,
+            "add_funds": 12000
+        },
+        "plans": [
+            {
+                "plan_type": "Employer 401(k)",
+                "provider": "Principal Financial Group",
+                "plan_id": "AFMC-401K-2024",
+                "administrator_contact": {
+                    "name": null,
+                    "e_mail": "hr@austinfamilymed.com",
+                    "phone": null
+                },
+                "se_context": {
+                    "employer_tax_id": "74-2851964",
+                    "plan_name": "Austin Family Medical 401(k) Plan",
+                    "plan_admin": "Principal Workplace Benefits",
+                    "roth_first_year": null
+                }
+            },
+            {
+                "plan_type": "Roth IRA",
+                "provider": "Vanguard",
+                "plan_id": "VANG-IRA-PENDING",
+                "administrator_contact": {
+                    "name": null,
+                    "e_mail": "mary.collins.rn@gmail.com",
+                    "phone": null
+                },
+                "se_context": {
+                    "employer_tax_id": null,
+                    "plan_name": null,
+                    "plan_admin": null,
+                    "roth_first_year": null
+                }
+            }
+        ],
+        "contribution_settings": {
+            "pretax": 2720,
+            "roth": 2400,
+            "catch_up": null,
+            "auto_escalation": {
+                "enabled": true,
+                "starting_rate": null,
+                "increase_rate": 1,
+                "max_rate": 10,
+                "start_date": null
+            }
+        },
+        "beneficiaries": [
+            {
+                "full_legal_name": "Emma Rose Collins",
+                "first": "Emma",
+                "middle": "Rose",
+                "last": "Collins",
+                "dob": "03/15/2019",
+                "relationship": "child",
+                "email": null,
+                "phone_mobile": null,
+                "phone_alt": null,
+                "address": {
+                    "street": "4521 South Lamar Blvd, Apt 208",
+                    "city": "Austin",
+                    "state": "TX",
+                    "zip_code": "78745"
+                },
+                "share_prc": 100,
+                "ssn_or_tin": "789-12-3456"
+            }
+        ],
+        "contingent": [
+            {
+                "name": "Susan Marie Collins",
+                "share_prc": 100,
+                "relationship": "parent"
+            }
+        ],
+        "agreements": {
+            "data_privacy_consent_at": "02/20/2024",
+            "erisa_disclosures_ack_at": "02/20/2024",
+            "plan_document_read_at": "02/21/2024",
+            "e_delivery_consent_at": "02/20/2024",
+            "arbitration_accepted_at": "02/21/2024",
+            "signed": {
+                "participant": {
+                    "signed_at": "02/22/2024",
+                    "signature_type": "Electronic",
+                    "signature_ref": "DocuSign-MC-20240222-001"
+                },
+                "administrator": {
+                    "signed_at": "02/23/2024",
+                    "admin_name": "Jennifer Martinez",
+                    "admin_title": "HR Benefits Coordinator",
+                    "signature_ref": "DocuSign-JM-20240223-001"
+                }
+            }
+        }
+    },
+
+    {
+        "user_id": "profile3",
+        "personal_info": {
+            "full_legal_name": "John Michael Thompson",
+            "first": "John",
+            "middle": "Michael",
+            "last": "Thompson",
+            "dob": "08/15/1985",
+            "sex": "Male",
+            "citizenship": "U.S. citizen",
+            "id_number": "D12345678",
+            "id_type": "Driver's License",
+            "country_of_issuance": "USA",
+            "id_issuance_date": "09/01/2015",
+            "id_expiration_date": "09/01/2025",
+            "marital_status": "married",
+            "ssn_or_tin": "123-45-6789",
+            "dependents": [
+                {
+                    "name": "Emily Rose Thompson",
+                    "dob": "06/12/2010",
+                    "relation": "daughter"
+                },
+                {
+                    "name": "Liam John Thompson",
+                    "dob": "11/23/2012",
+                    "relation": "son"
+                }
+            ]
+        },
+        "contact_info": {
+            "email": "john.thompson@email.com",
+            "phone_mobile": "+1 (555) 123-4567",
+            "phone_alt": "+1 (555) 987-6543",
+            "address": {
+                "street": "123 Maple Street",
+                "city": "Springfield",
+                "state": "IL",
+                "zip_code": "62704"
+            }
+        },
+        "employment_info": {
+            "company_name": "Horizon Financial Group",
+            "job_title": "Senior Financial Analyst",
+            "employee_id": "HFG-45872",
+            "hire_date": "03/15/2010",
+            "pay_frequency": "Bi-weekly",
+            "year_funds": 120000,
+            "add_funds": 15000
+        },
+        "plans": [
+            {
+                "plan_type": "401k",
+                "provider": "Vanguard",
+                "plan_id": "VFG-401k-1123",
+                "administrator_contact": {
+                    "name": "Sarah Williams",
+                    "e_mail": "sarah.williams@vanguard.com",
+                    "phone": "+1 (800) 555-2211"
+                },
+                "se_context": {
+                    "employer_tax_id": "12-3456789",
+                    "plan_name": "Horizon 401(k) Plan",
+                    "plan_admin": "Horizon HR",
+                    "roth_first_year": 2018
+                }
+            }
+        ],
+        "contribution_settings": {
+            "pretax": 500,
+            "roth": "5% of salary",
+            "catch_up": 200,
+            "auto_escalation": {
+                "enabled": true,
+                "starting_rate": 3,
+                "increase_rate": 1,
+                "max_rate": 10,
+                "start_date": "01/01/2024"
+            }
+        },
+        "beneficiaries": [
+            {
+                "full_legal_name": "Jane Marie Thompson",
+                "first": "Jane",
+                "middle": "Marie",
+                "last": "Thompson",
+                "dob": "09/22/1986",
+                "relationship": "spouse",
+                "email": "jane.thompson@email.com",
+                "phone_mobile": "+1 (555) 234-5678",
+                "phone_alt": "+1 (555) 876-5432",
+                "address": {
+                    "street": "123 Maple Street",
+                    "city": "Springfield",
+                    "state": "IL",
+                    "zip_code": "62704"
+                },
+                "share_prc": 100,
+                "ssn_or_tin": "987-65-4321"
+            }
+        ],
+        "contingent": [
+            {
+                "name": null,
+                "share_prc": null,
+                "relationship": null
+            }
+        ],
+        "agreements": {
+            "data_privacy_consent_at": "08/01/2025",
+            "erisa_disclosures_ack_at": "08/01/2025",
+            "plan_document_read_at": "08/01/2025",
+            "e_delivery_consent_at": "08/01/2025",
+            "arbitration_accepted_at": "08/01/2025",
+            "signed": {
+                "participant": {
+                    "signed_at": "08/01/2025",
+                    "signature_type": "digital",
+                    "signature_ref": "JT-2025-08"
+                },
+                "administrator": {
+                    "signed_at": "08/02/2025",
+                    "admin_name": "Sarah Williams",
+                    "admin_title": "HR Manager",
+                    "signature_ref": "SW-2025-08"
+                }
+            }
+        }
+    },
+
+    {
+        "user_id": "profile4",
+        "personal_info": {
+            "full_legal_name": "Alice Marie Carter",
+            "first": "Alice",
+            "middle": "Marie",
+            "last": "Carter",
+            "dob": "02/28/1990",
+            "sex": "Female",
+            "citizenship": "U.S. citizen",
+            "id_number": "C98765432",
+            "id_type": "Driver's License",
+            "country_of_issuance": "USA",
+            "id_issuance_date": "03/15/2016",
+            "id_expiration_date": "03/15/2026",
+            "marital_status": "unmarried",
+            "ssn_or_tin": "234-56-7890",
+            "dependents": [
+                {
+                    "name": "Noah James Carter",
+                    "dob": "05/10/2018",
+                    "relation": "son"
+                }
+            ]
+        },
+        "contact_info": {
+            "email": "alice.carter@email.com",
+            "phone_mobile": "+1 (555) 345-6789",
+            "phone_alt": "+1 (555) 987-1234",
+            "address": {
+                "street": "456 Oak Avenue",
+                "city": "Denver",
+                "state": "CO",
+                "zip_code": "80203"
+            }
+        },
+        "employment_info": {
+            "company_name": "Summit Tech Solutions",
+            "job_title": "Software Engineer",
+            "employee_id": "STS-77231",
+            "hire_date": "07/01/2015",
+            "pay_frequency": "Monthly",
+            "year_funds": 95000,
+            "add_funds": 8000
+        },
+        "plans": [
+            {
+                "plan_type": "Roth 401k",
+                "provider": "Fidelity",
+                "plan_id": "FID-R401K-2245",
+                "administrator_contact": {
+                    "name": "Mark Reynolds",
+                    "e_mail": "mark.reynolds@fidelity.com",
+                    "phone": "+1 (800) 555-3344"
+                },
+                "se_context": {
+                    "employer_tax_id": "98-7654321",
+                    "plan_name": "Summit Roth 401(k)",
+                    "plan_admin": "Summit HR",
+                    "roth_first_year": 2017
+                }
+            }
+        ],
+        "contribution_settings": {
+            "pretax": 0,
+            "roth": "10% of salary",
+            "catch_up": 0,
+            "auto_escalation": {
+                "enabled": true,
+                "starting_rate": 2,
+                "increase_rate": 1,
+                "max_rate": 15,
+                "start_date": "01/01/2025"
+            }
+        },
+        "beneficiaries": [
+            {
+                "full_legal_name": "Robert Thomas Carter",
+                "first": "Robert",
+                "middle": "Thomas",
+                "last": "Carter",
+                "dob": "11/12/1988",
+                "relationship": "spouse",
+                "email": "robert.carter@email.com",
+                "phone_mobile": "+1 (555) 456-7890",
+                "phone_alt": "+1 (555) 654-3210",
+                "address": {
+                    "street": "456 Oak Avenue",
+                    "city": "Denver",
+                    "state": "CO",
+                    "zip_code": "80203"
+                },
+                "share_prc": 100,
+                "ssn_or_tin": "345-67-8901"
+            }
+        ],
+        "contingent": [
+            {
+                "name": null,
+                "share_prc": null,
+                "relationship": null
+            }
+        ],
+        "agreements": {
+            "data_privacy_consent_at": "07/15/2025",
+            "erisa_disclosures_ack_at": "07/15/2025",
+            "plan_document_read_at": "07/15/2025",
+            "e_delivery_consent_at": "07/15/2025",
+            "arbitration_accepted_at": "07/15/2025",
+            "signed": {
+                "participant": {
+                    "signed_at": "07/15/2025",
+                    "signature_type": "digital",
+                    "signature_ref": "AC-2025-07"
+                },
+                "administrator": {
+                    "signed_at": "07/16/2025",
+                    "admin_name": "Mark Reynolds",
+                    "admin_title": "HR Manager",
+                    "signature_ref": "MR-2025-07"
+                }
+            }
+        }
+    },
+
+    {
+        "user_id": "profile5",
+        "personal_info": {
+            "full_legal_name": "David Allen Brooks",
+            "first": "David",
+            "middle": "Allen",
+            "last": "Brooks",
+            "dob": "12/05/1978",
+            "sex": "Male",
+            "citizenship": "U.S. citizen",
+            "id_number": "B56473829",
+            "id_type": "Driver's License",
+            "country_of_issuance": "USA",
+            "id_issuance_date": "01/10/2012",
+            "id_expiration_date": "01/10/2022",
+            "marital_status": "married",
+            "ssn_or_tin": "456-78-9012",
+            "dependents": [
+                {
+                    "name": "Sarah Lynn Brooks",
+                    "dob": "08/22/2005",
+                    "relation": "daughter"
+                },
+                {
+                    "name": "Ethan David Brooks",
+                    "dob": "04/30/2008",
+                    "relation": "son"
+                }
+            ]
+        },
+        "contact_info": {
+            "email": "david.brooks@email.com",
+            "phone_mobile": "+1 (555) 567-8901",
+            "phone_alt": "+1 (555) 321-7654",
+            "address": {
+                "street": "789 Pine Lane",
+                "city": "Austin",
+                "state": "TX",
+                "zip_code": "73301"
+            }
+        },
+        "employment_info": {
+            "company_name": "Lone Star Energy",
+            "job_title": "Project Manager",
+            "employee_id": "LSE-99124",
+            "hire_date": "05/20/2003",
+            "pay_frequency": "Semi-monthly",
+            "year_funds": 130000,
+            "add_funds": 20000
+        },
+        "plans": [
+            {
+                "plan_type": "401k",
+                "provider": "Charles Schwab",
+                "plan_id": "CS-401K-8890",
+                "administrator_contact": {
+                    "name": "Linda Parker",
+                    "e_mail": "linda.parker@schwab.com",
+                    "phone": "+1 (800) 555-5566"
+                },
+                "se_context": {
+                    "employer_tax_id": "23-4567890",
+                    "plan_name": "Lone Star 401(k) Plan",
+                    "plan_admin": "Lone Star HR",
+                    "roth_first_year": 2015
+                }
+            }
+        ],
+        "contribution_settings": {
+            "pretax": 600,
+            "roth": "3% of salary",
+            "catch_up": 250,
+            "auto_escalation": {
+                "enabled": false,
+                "starting_rate": null,
+                "increase_rate": null,
+                "max_rate": null,
+                "start_date": null
+            }
+        },
+        "beneficiaries": [
+            {
+                "full_legal_name": "Laura Jane Brooks",
+                "first": "Laura",
+                "middle": "Jane",
+                "last": "Brooks",
+                "dob": "03/18/1980",
+                "relationship": "spouse",
+                "email": "laura.brooks@email.com",
+                "phone_mobile": "+1 (555) 678-9012",
+                "phone_alt": "+1 (555) 432-1098",
+                "address": {
+                    "street": "789 Pine Lane",
+                    "city": "Austin",
+                    "state": "TX",
+                    "zip_code": "73301"
+                },
+                "share_prc": 100,
+                "ssn_or_tin": "567-89-0123"
+            }
+        ],
+        "contingent": [
+            {
+                "name": null,
+                "share_prc": null,
+                "relationship": null
+            }
+        ],
+        "agreements": {
+            "data_privacy_consent_at": "09/05/2025",
+            "erisa_disclosures_ack_at": "09/05/2025",
+            "plan_document_read_at": "09/05/2025",
+            "e_delivery_consent_at": "09/05/2025",
+            "arbitration_accepted_at": "09/05/2025",
+            "signed": {
+                "participant": {
+                    "signed_at": "09/05/2025",
+                    "signature_type": "digital",
+                    "signature_ref": "DB-2025-09"
+                },
+                "administrator": {
+                    "signed_at": "09/06/2025",
+                    "admin_name": "Linda Parker",
+                    "admin_title": "HR Manager",
+                    "signature_ref": "LP-2025-09"
+                }
+            }
+        }
+    },
+
+    {
+        "user_id": "profile6",
+        "personal_info": {
+            "full_legal_name": "Michelle Ann Reynolds",
+            "first": "Michelle",
+            "middle": "Ann",
+            "last": "Reynolds",
+            "dob": "07/19/1987",
+            "sex": "Female",
+            "citizenship": "U.S. citizen",
+            "id_number": "R34567219",
+            "id_type": "Driver's License",
+            "country_of_issuance": "USA",
+            "id_issuance_date": "08/05/2017",
+            "id_expiration_date": "08/05/2027",
+            "marital_status": "unmarried",
+            "ssn_or_tin": "567-12-3456",
+            "dependents": []
+        },
+        "contact_info": {
+            "email": "michelle.reynolds@email.com",
+            "phone_mobile": "+1 (555) 789-1234",
+            "phone_alt": "+1 (555) 321-9876",
+            "address": {
+                "street": "321 Cedar Road",
+                "city": "Seattle",
+                "state": "WA",
+                "zip_code": "98101"
+            }
+        },
+        "employment_info": {
+            "company_name": "Pacific Data Systems",
+            "job_title": "Data Scientist",
+            "employee_id": "PDS-55421",
+            "hire_date": "09/10/2014",
+            "pay_frequency": "Monthly",
+            "year_funds": 115000,
+            "add_funds": 12000
+        },
+        "plans": [
+            {
+                "plan_type": "Roth 401k",
+                "provider": "Fidelity",
+                "plan_id": "FID-R401K-3377",
+                "administrator_contact": {
+                    "name": "Tom Harris",
+                    "e_mail": "tom.harris@fidelity.com",
+                    "phone": "+1 (800) 555-6677"
+                },
+                "se_context": {
+                    "employer_tax_id": "11-2233445",
+                    "plan_name": "Pacific Roth 401(k)",
+                    "plan_admin": "Pacific HR",
+                    "roth_first_year": 2019
+                }
+            }
+        ],
+        "contribution_settings": {
+            "pretax": 0,
+            "roth": "8% of salary",
+            "catch_up": 0,
+            "auto_escalation": {
+                "enabled": true,
+                "starting_rate": 2,
+                "increase_rate": 1,
+                "max_rate": 12,
+                "start_date": "01/01/2025"
+            }
+        },
+        "beneficiaries": [
+            {
+                "full_legal_name": "Michael James Reynolds",
+                "first": "Michael",
+                "middle": "James",
+                "last": "Reynolds",
+                "dob": "06/30/1985",
+                "relationship": "spouse",
+                "email": "michael.reynolds@email.com",
+                "phone_mobile": "+1 (555) 890-2345",
+                "phone_alt": "+1 (555) 432-8765",
+                "address": {
+                    "street": "321 Cedar Road",
+                    "city": "Seattle",
+                    "state": "WA",
+                    "zip_code": "98101"
+                },
+                "share_prc": 100,
+                "ssn_or_tin": "678-23-4567"
+            }
+        ],
+        "contingent": [
+            {
+                "name": null,
+                "share_prc": null,
+                "relationship": null
+            }
+        ],
+        "agreements": {
+            "data_privacy_consent_at": "06/15/2025",
+            "erisa_disclosures_ack_at": "06/15/2025",
+            "plan_document_read_at": "06/15/2025",
+            "e_delivery_consent_at": "06/15/2025",
+            "arbitration_accepted_at": "06/15/2025",
+            "signed": {
+                "participant": {
+                    "signed_at": "06/15/2025",
+                    "signature_type": "digital",
+                    "signature_ref": "MR-2025-06"
+                },
+                "administrator": {
+                    "signed_at": "06/16/2025",
+                    "admin_name": "Tom Harris",
+                    "admin_title": "HR Manager",
+                    "signature_ref": "TH-2025-06"
+                }
+            }
+        }
+    },
+
+    {
+        "user_id": "profile7",
+        "personal_info": {
+            "full_legal_name": "Brian Patrick Sullivan",
+            "first": "Brian",
+            "middle": "Patrick",
+            "last": "Sullivan",
+            "dob": "04/11/1982",
+            "sex": "Male",
+            "citizenship": "U.S. citizen",
+            "id_number": "S56473820",
+            "id_type": "Driver's License",
+            "country_of_issuance": "USA",
+            "id_issuance_date": "05/01/2013",
+            "id_expiration_date": "05/01/2023",
+            "marital_status": "married",
+            "ssn_or_tin": "789-12-3456",
+            "dependents": [
+                {
+                    "name": "Chloe Marie Sullivan",
+                    "dob": "12/05/2010",
+                    "relation": "daughter"
+                }
+            ]
+        },
+        "contact_info": {
+            "email": "brian.sullivan@email.com",
+            "phone_mobile": "+1 (555) 901-3456",
+            "phone_alt": "+1 (555) 210-6543",
+            "address": {
+                "street": "654 Birch Lane",
+                "city": "Miami",
+                "state": "FL",
+                "zip_code": "33101"
+            }
+        },
+        "employment_info": {
+            "company_name": "Sunshine Logistics",
+            "job_title": "Operations Manager",
+            "employee_id": "SL-88321",
+            "hire_date": "01/20/2008",
+            "pay_frequency": "Semi-monthly",
+            "year_funds": 110000,
+            "add_funds": 10000
+        },
+        "plans": [
+            {
+                "plan_type": "401k",
+                "provider": "Charles Schwab",
+                "plan_id": "CS-401K-5590",
+                "administrator_contact": {
+                    "name": "Nancy White",
+                    "e_mail": "nancy.white@schwab.com",
+                    "phone": "+1 (800) 555-7788"
+                },
+                "se_context": {
+                    "employer_tax_id": "34-5566778",
+                    "plan_name": "Sunshine 401(k)",
+                    "plan_admin": "Sunshine HR",
+                    "roth_first_year": 2016
+                }
+            }
+        ],
+        "contribution_settings": {
+            "pretax": 550,
+            "roth": "4% of salary",
+            "catch_up": 220,
+            "auto_escalation": {
+                "enabled": true,
+                "starting_rate": 3,
+                "increase_rate": 1,
+                "max_rate": 10,
+                "start_date": "01/01/2024"
+            }
+        },
+        "beneficiaries": [
+            {
+                "full_legal_name": "Laura Jean Sullivan",
+                "first": "Laura",
+                "middle": "Jean",
+                "last": "Sullivan",
+                "dob": "09/18/1983",
+                "relationship": "spouse",
+                "email": "laura.sullivan@email.com",
+                "phone_mobile": "+1 (555) 432-9876",
+                "phone_alt": "+1 (555) 876-5432",
+                "address": {
+                    "street": "654 Birch Lane",
+                    "city": "Miami",
+                    "state": "FL",
+                    "zip_code": "33101"
+                },
+                "share_prc": 100,
+                "ssn_or_tin": "890-12-3456"
+            }
+        ],
+        "contingent": [
+            {
+                "name": null,
+                "share_prc": null,
+                "relationship": null
+            }
+        ],
+        "agreements": {
+            "data_privacy_consent_at": "05/10/2025",
+            "erisa_disclosures_ack_at": "05/10/2025",
+            "plan_document_read_at": "05/10/2025",
+            "e_delivery_consent_at": "05/10/2025",
+            "arbitration_accepted_at": "05/10/2025",
+            "signed": {
+                "participant": {
+                    "signed_at": "05/10/2025",
+                    "signature_type": "digital",
+                    "signature_ref": "BS-2025-05"
+                },
+                "administrator": {
+                    "signed_at": "05/11/2025",
+                    "admin_name": "Nancy White",
+                    "admin_title": "HR Manager",
+                    "signature_ref": "NW-2025-05"
+                }
+            }
+        }
+    },
+
+    {
+        "user_id": "profile8",
+        "personal_info": {
+            "full_legal_name": "Kevin Robert Matthews",
+            "first": "Kevin",
+            "middle": "Robert",
+            "last": "Matthews",
+            "dob": "10/23/1975",
+            "sex": "Male",
+            "citizenship": "U.S. citizen",
+            "id_number": "M34567129",
+            "id_type": "Driver's License",
+            "country_of_issuance": "USA",
+            "id_issuance_date": "11/10/2010",
+            "id_expiration_date": "11/10/2020",
+            "marital_status": "married",
+            "ssn_or_tin": "901-23-4567",
+            "dependents": [
+                {
+                    "name": "Olivia Grace Matthews",
+                    "dob": "07/07/2003",
+                    "relation": "daughter"
+                },
+                {
+                    "name": "Mason Kevin Matthews",
+                    "dob": "02/14/2006",
+                    "relation": "son"
+                }
+            ]
+        },
+        "contact_info": {
+            "email": "kevin.matthews@email.com",
+            "phone_mobile": "+1 (555) 765-4321",
+            "phone_alt": "+1 (555) 234-5678",
+            "address": {
+                "street": "987 Elm Street",
+                "city": "Boston",
+                "state": "MA",
+                "zip_code": "02108"
+            }
+        },
+        "employment_info": {
+            "company_name": "Atlantic Engineering Co.",
+            "job_title": "Civil Engineer",
+            "employee_id": "AEC-66231",
+            "hire_date": "06/15/2000",
+            "pay_frequency": "Bi-weekly",
+            "year_funds": 125000,
+            "add_funds": 18000
+        },
+        "plans": [
+            {
+                "plan_type": "401k",
+                "provider": "Vanguard",
+                "plan_id": "VFG-401k-7766",
+                "administrator_contact": {
+                    "name": "Karen Lewis",
+                    "e_mail": "karen.lewis@vanguard.com",
+                    "phone": "+1 (800) 555-8899"
+                },
+                "se_context": {
+                    "employer_tax_id": "45-6677889",
+                    "plan_name": "Atlantic 401(k)",
+                    "plan_admin": "Atlantic HR",
+                    "roth_first_year": 2012
+                }
+            }
+        ],
+        "contribution_settings": {
+            "pretax": 650,
+            "roth": "2% of salary",
+            "catch_up": 300,
+            "auto_escalation": {
+                "enabled": false
+            }
+        },
+        "beneficiaries": [
+            {
+                "full_legal_name": "Laura Matthews",
+                "first": "Laura",
+                "middle": null,
+                "last": "Matthews",
+                "dob": "03/12/1976",
+                "relationship": "spouse",
+                "email": "laura.matthews@email.com",
+                "phone_mobile": "+1 (555) 876-5432",
+                "phone_alt": "+1 (555) 321-0987",
+                "address": {
+                    "street": "987 Elm Street",
+                    "city": "Boston",
+                    "state": "MA",
+                    "zip_code": "02108"
+                },
+                "share_prc": 100,
+                "ssn_or_tin": "012-34-5678"
+            }
+        ],
+        "contingent": [
+            {
+                "name": null,
+                "share_prc": null,
+                "relationship": null
+            }
+        ],
+        "agreements": {
+            "data_privacy_consent_at": "04/01/2025",
+            "erisa_disclosures_ack_at": "04/01/2025",
+            "plan_document_read_at": "04/01/2025",
+            "e_delivery_consent_at": "04/01/2025",
+            "arbitration_accepted_at": "04/01/2025",
+            "signed": {
+                "participant": {
+                    "signed_at": "04/01/2025",
+                    "signature_type": "digital",
+                    "signature_ref": "KM-2025-04"
+                },
+                "administrator": {
+                    "signed_at": "04/02/2025",
+                    "admin_name": "Karen Lewis",
+                    "admin_title": "HR Manager",
+                    "signature_ref": "KL-2025-04"
+                }
+            }
+        }
+    },
+
+    {
+        "user_id": "profile9",
+        "personal_info": {
+            "full_legal_name": "Samantha Nicole Lee",
+            "first": "Samantha",
+            "middle": "Nicole",
+            "last": "Lee",
+            "dob": "05/06/1992",
+            "sex": "Female",
+            "citizenship": "U.S. citizen",
+            "id_number": "L56781234",
+            "id_type": "Driver's License",
+            "country_of_issuance": "USA",
+            "id_issuance_date": "06/20/2018",
+            "id_expiration_date": "06/20/2028",
+            "marital_status": "unmarried",
+            "ssn_or_tin": "123-98-7654",
+            "dependents": []
+        },
+        "contact_info": {
+            "email": "samantha.lee@email.com",
+            "phone_mobile": "+1 (555) 654-3210",
+            "phone_alt": "+1 (555) 210-9876",
+            "address": {
+                "street": "159 Willow Drive",
+                "city": "San Francisco",
+                "state": "CA",
+                "zip_code": "94102"
+            }
+        },
+        "employment_info": {
+            "company_name": "Bay Area Marketing",
+            "job_title": "Marketing Specialist",
+            "employee_id": "BAM-44322",
+            "hire_date": "02/15/2017",
+            "pay_frequency": "Monthly",
+            "year_funds": 85000,
+            "add_funds": 7000
+        },
+        "plans": [
+            {
+                "plan_type": "Roth 401k",
+                "provider": "Fidelity",
+                "plan_id": "FID-R401K-4455",
+                "administrator_contact": {
+                    "name": "Emily Carter",
+                    "email": "emily.carter@fidelity.com",
+                    "phone": "+1 (800) 555-9900"
+                },
+                "se_context": {
+                    "employer_tax_id": "56-7788990",
+                    "plan_name": "Bay Area Roth 401(k)",
+                    "plan_admin": "Bay Area HR",
+                    "roth_first_year": 2020
+                }
+            }
+        ],
+        "contribution_settings": {
+            "pretax": 0,
+            "roth": "6% of salary",
+            "catch_up": 0,
+            "auto_escalation": {
+                "enabled": true,
+                "starting": "3%",
+                "annual_step": "1%",
+                "cap": "12%",
+                "start_date": "01/01/2025"
+            }
+        },
+        "beneficiaries": [
+            {
+                "full_legal_name": "Michelle Lee",
+                "first": "Michelle",
+                "middle": null,
+                "last": "Lee",
+                "dob": "01/10/1965",
+                "relationship": "parent",
+                "email": "michelle.lee@email.com",
+                "phone_mobile": "+1 (555) 987-6543",
+                "phone_alt": "+1 (555) 321-6549",
+                "address": {
+                    "street": "159 Willow Drive",
+                    "city": "San Francisco",
+                    "state": "CA",
+                    "zip_code": "94102"
+                },
+                "share_prc": 100,
+                "ssn_or_tin": "234-56-7890"
+            }
+        ],
+        "contingent": [
+            {
+                "name": null,
+                "share_prc": null,
+                "relationship": null
+            }
+        ],
+        "agreements": {
+            "data_privacy_consent_at": "03/12/2025",
+            "erisa_disclosures_ack_at": "03/12/2025",
+            "plan_document_read_at": "03/12/2025",
+            "e_delivery_consent_at": "03/12/2025",
+            "arbitration_accepted_at": "03/12/2025",
+            "signed": {
+                "participant": {
+                    "signed_at": "03/12/2025",
+                    "signature_type": "digital",
+                    "signature_ref": "SL-2025-03"
+                },
+                "administrator": {
+                    "signed_at": "03/13/2025",
+                    "admin_name": "Emily Carter",
+                    "admin_title": "HR Manager",
+                    "signature_ref": "EC-2025-03"
+                }
+            }
+        }
+    },
+
+    {
+        "user_id": "profile10",
+        "personal_info": {
+            "full_legal_name": "William Robert Carter",
+            "first": "William",
+            "middle": "Robert",
+            "last": "Carter",
+            "dob": "06/14/1982",
+            "sex": "Male",
+            "citizenship": "U.S. citizen",
+            "id_number": "456789123",
+            "id_type": "Driver's License",
+            "country_of_issuance": "USA",
+            "id_issuance_date": "04/10/2016",
+            "id_expiration_date": "04/10/2026",
+            "marital_status": "Married",
+            "ssn_or_tin": "123-99-8564",
+            "dependents": [
+                {"name": "Emily Carter", "dob": "02/22/2012", "relation": "daughter"},
+                {"name": "Ryan Carter", "dob": "05/05/2016", "relation": "son"}
+            ]
+        },
+        "contact_info": {
+            "email": "william.carter82@gmail.com",
+            "phone_mobile": "+1 (312) 555-8901",
+            "phone_alt": "+1 (312) 555-4455",
+            "address": {
+                "street": "910 W Oak St",
+                "city": "Chicago",
+                "state": "IL",
+                "zip_code": "60610"
+            }
+        },
+        "employment_info": {
+            "company_name": "JPMorgan Chase",
+            "job_title": "Senior Financial Analyst",
+            "employee_id": "774892",
+            "hire_date": "01/12/2015",
+            "pay_frequency": "Semi-monthly",
+            "year_funds": 135000,
+            "add_funds": 20000
+        },
+        "plans": [
+            {
+                "plan_type": "401k",
+                "provider": "Fidelity",
+                "plan_id": "FID401-891",
+                "administrator_contact": {"email": "hr@jpmchase.com"},
+                "se_context": {
+                    "employer_tax_id": "52-3210987",
+                    "plan_name": "Chase Retirement Plus",
+                    "plan_admin": "Karen White",
+                    "roth_first_year": 2017
+                }
+            }
+        ],
+        "contribution_settings": {
+            "pretax": "8%",
+            "roth": "3%",
+            "catch_up": 0,
+            "auto_escalation": {
+                "enabled": true,
+                "increment": "+1% per year",
+                "cap": "12%",
+                "start_date": "01/01/2024"
+            }
+        },
+        "beneficiaries": [
+            {
+                "full_legal_name": "Sarah Carter",
+                "first": "Sarah",
+                "middle": null,
+                "last": "Carter",
+                "dob": "09/18/1985",
+                "relationship": "spouse",
+                "email": "sarah.carter85@gmail.com",
+                "phone_mobile": "+1 (312) 555-9911",
+                "phone_alt": "+1 (312) 555-8822",
+                "address": {
+                    "street": "910 W Oak St",
+                    "city": "Chicago",
+                    "state": "IL",
+                    "zip_code": "60610"
+                },
+                "share_prc": 100,
+                "ssn_or_tin": "123-45-9987"
+            }
+        ],
+        "contingent": [
+            {
+                "name": null,
+                "share_prc": null,
+                "relationship": null
+            }
+        ],
+        "agreements": {
+            "data_privacy_consent_at": "01/01/2024",
+            "erisa_disclosures_ack_at": "01/01/2024",
+            "plan_document_read_at": "01/01/2024",
+            "e_delivery_consent_at": "01/01/2024",
+            "arbitration_accepted_at": "01/01/2024",
+            "signed": {
+                "participant": {
+                    "signed_at": "01/02/2024",
+                    "signature_type": "electronic",
+                    "signature_ref": "WRC2024"
+                },
+                "administrator": {
+                    "signed_at": "01/03/2024",
+                    "admin_name": "Karen White",
+                    "admin_title": "HR Manager",
+                    "signature_ref": "KW2024"
+                }
+            }
+        }
+    },
+
+    {
+        "user_id": "profile11",
+        "personal_info": {
+            "full_legal_name": "Olivia Marie Thompson",
+            "first": "Olivia",
+            "middle": "Marie",
+            "last": "Thompson",
+            "dob": "11/23/1990",
+            "sex": "Female",
+            "citizenship": "U.S. citizen",
+            "id_number": "674523908",
+            "id_type": "Driver's License",
+            "country_of_issuance": "USA",
+            "id_issuance_date": "08/11/2017",
+            "id_expiration_date": "08/11/2027",
+            "marital_status": "Single",
+            "ssn_or_tin": "123-76-5432",
+            "dependents": []
+        },
+        "contact_info": {
+            "email": "olivia.thompson90@gmail.com",
+            "phone_mobile": "+1 (415) 555-4321",
+            "phone_alt": "+1 (415) 555-9988",
+            "address": {
+                "street": "1200 Market St",
+                "city": "San Francisco",
+                "state": "CA",
+                "zip_code": "94103"
+            }
+        },
+        "employment_info": {
+            "company_name": "Airbnb Inc.",
+            "job_title": "UX Designer",
+            "employee_id": "983221",
+            "hire_date": "03/15/2019",
+            "pay_frequency": "Bi-weekly",
+            "year_funds": 110000,
+            "add_funds": 12000
+        },
+        "plans": [
+            {
+                "plan_type": "Roth 401k",
+                "provider": "Vanguard",
+                "plan_id": "VGD-ROTH-443",
+                "administrator_contact": {"email": "benefits@airbnb.com"},
+                "se_context": {
+                    "employer_tax_id": "77-6654321",
+                    "plan_name": "Airbnb Growth Plan",
+                    "plan_admin": "Jason Miller",
+                    "roth_first_year": 2020
+                }
+            }
+        ],
+        "contribution_settings": {
+            "pretax": "5%",
+            "roth": "6%",
+            "catch_up": 0,
+            "auto_escalation": {
+                "enabled": false
+            }
+        },
+        "beneficiaries": [
+            {
+                "full_legal_name": "Sophia Thompson",
+                "first": "Sophia",
+                "middle": null,
+                "last": "Thompson",
+                "dob": "05/29/1992",
+                "relationship": "sibling",
+                "email": "sophia.thompson92@gmail.com",
+                "phone_mobile": "+1 (415) 555-1122",
+                "phone_alt": "+1 (415) 555-3344",
+                "address": {
+                    "street": "456 2nd St",
+                    "city": "San Francisco",
+                    "state": "CA",
+                    "zip_code": "94107"
+                },
+                "share_prc": 100,
+                "ssn_or_tin": "123-56-2211"
+            }
+        ],
+        "contingent": [
+            {
+                "name": null,
+                "share_prc": null,
+                "relationship": null
+            }
+        ],
+        "agreements": {
+            "data_privacy_consent_at": "02/01/2024",
+            "erisa_disclosures_ack_at": "02/01/2024",
+            "plan_document_read_at": "02/01/2024",
+            "e_delivery_consent_at": "02/01/2024",
+            "arbitration_accepted_at": "02/01/2024",
+            "signed": {
+                "participant": {
+                    "signed_at": "02/02/2024",
+                    "signature_type": "electronic",
+                    "signature_ref": "OMT2024"
+                },
+                "administrator": {
+                    "signed_at": "02/03/2024",
+                    "admin_name": "Jason Miller",
+                    "admin_title": "Benefits Manager",
+                    "signature_ref": "JM2024"
+                }
+            }
+        }
+    },
+
+    {
+        "user_id": "profile12",
+        "personal_info": {
+            "full_legal_name": "Ethan James Mitchell",
+            "first": "Ethan",
+            "middle": "James",
+            "last": "Mitchell",
+            "dob": "04/09/1975",
+            "sex": "Male",
+            "citizenship": "U.S. citizen",
+            "id_number": "890321765",
+            "id_type": "Driver's License",
+            "country_of_issuance": "USA",
+            "id_issuance_date": "05/20/2014",
+            "id_expiration_date": "05/20/2024",
+            "marital_status": "Married",
+            "ssn_or_tin": "123-65-9987",
+            "dependents": [
+                {
+                    "name": "Lucas Mitchell",
+                    "dob": "07/11/2005",
+                    "relation": "son"
+                }
+            ]
+        },
+        "contact_info": {
+            "email": "ethan.mitchell75@gmail.com",
+            "phone_mobile": "+1 (718) 555-7788",
+            "phone_alt": "+1 (718) 555-9922",
+            "address": {
+                "street": "220 Park Ave",
+                "city": "Brooklyn",
+                "state": "NY",
+                "zip_code": "11205"
+            }
+        },
+        "employment_info": {
+            "company_name": "Pfizer Inc.",
+            "job_title": "Research Scientist",
+            "employee_id": "557893",
+            "hire_date": "09/01/2008",
+            "pay_frequency": "Monthly",
+            "year_funds": 145000,
+            "add_funds": 18500
+        },
+        "plans": [
+            {
+                "plan_type": "401k",
+                "provider": "Fidelity",
+                "plan_id": "FID401-663",
+                "administrator_contact": {"email": "hr@pfizer.com"},
+                "se_context": {
+                    "employer_tax_id": "13-5315179",
+                    "plan_name": "Pfizer Retirement Advantage",
+                    "plan_admin": "Laura Adams",
+                    "roth_first_year": 2012
+                }
+            }
+        ],
+        "contribution_settings": {
+            "pretax": "7%",
+            "roth": "2%",
+            "catch_up": "1%",
+            "auto_escalation": {
+                "enabled": true,
+                "annual_step": 1,
+                "cap": 12,
+                "start_date": "01/01/2025"
+            }
+        },
+        "beneficiaries": [
+            {
+                "full_legal_name": "Anna Mitchell",
+                "first": "Anna",
+                "middle": null,
+                "last": "Mitchell",
+                "dob": "12/12/1977",
+                "relationship": "spouse",
+                "email": "anna.mitchell77@gmail.com",
+                "phone_mobile": "+1 (718) 555-7733",
+                "phone_alt": "+1 (718) 555-9911",
+                "address": {
+                    "street": "220 Park Ave",
+                    "city": "Brooklyn",
+                    "state": "NY",
+                    "zip_code": "11205"
+                },
+                "share_prc": 100,
+                "ssn_or_tin": "123-44-1289"
+            }
+        ],
+        "contingent": [
+            {
+                "name": null,
+                "share_prc": null,
+                "relationship": null
+            }
+        ],
+        "agreements": {
+            "data_privacy_consent_at": "03/01/2024",
+            "erisa_disclosures_ack_at": "03/01/2024",
+            "plan_document_read_at": "03/01/2024",
+            "e_delivery_consent_at": "03/01/2024",
+            "arbitration_accepted_at": "03/01/2024",
+            "signed": {
+                "participant": {
+                    "signed_at": "03/02/2024",
+                    "signature_type": "electronic",
+                    "signature_ref": "EJM2024"
+                },
+                "administrator": {
+                    "signed_at": "03/03/2024",
+                    "admin_name": "Laura Adams",
+                    "admin_title": "HR Manager",
+                    "signature_ref": "LA2024"
+                }
+            }
+        }
+    }
+
+  ]
+}

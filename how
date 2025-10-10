@@ -1,0 +1,33 @@
+[33mcommit 2f5ea4bc24a3577f59106a5ff24cd66b32064254[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/vector[m[33m)[m
+Author: Jorakz <Joranosorog@gmail.com>
+Date:   Wed Oct 8 12:34:04 2025 +0300
+
+    FIX: change prompts, add scenario emptiness checker
+
+[1mdiff --git a/src/backend/audio/transcript_manager.py b/src/backend/audio/transcript_manager.py[m
+[1mindex 784ddcd..fee1da3 100644[m
+[1m--- a/src/backend/audio/transcript_manager.py[m
+[1m+++ b/src/backend/audio/transcript_manager.py[m
+[36m@@ -260,7 +260,8 @@[m [mclass TranscriptManager(BaseFacade):[m
+                     self.logger.info(f"Scenario validation result: {validation_result}")[m
+                     [m
+                     violation_alert = validation_result.get("deviation_details")[m
+[31m-                    await self.violation_callback(violation_alert)[m
+[32m+[m[32m                    if violation_alert != None:[m
+[32m+[m[32m                        await self.violation_callback(violation_alert)[m
+                     self.full_transcript_buffer.clear() #JZ[m
+                 except Exception as e:[m
+                     self.logger.error(f"Error during scenario validation: {e}")[m
+[1mdiff --git a/src/backend/prompts/templates/slm_template.j2 b/src/backend/prompts/templates/slm_template.j2[m
+[1mindex 236c986..4d0c648 100644[m
+[1m--- a/src/backend/prompts/templates/slm_template.j2[m
+[1m+++ b/src/backend/prompts/templates/slm_template.j2[m
+[36m@@ -11,7 +11,7 @@[m [mversion: 1.0[m
+             "type": "text",[m
+             "text": """[m
+             You are an expert on laws for financial advisors in the United States.[m
+[31m-            All outputs must be written **strictly in English**, regardless of input language.[m
+[32m+[m[41m           [m
+             Your task is to review transcripts of conversations and identify potential violations of US financial regulations and laws.[m
+ [m
+             You will receive transcripts of conversations in the following format:[m
