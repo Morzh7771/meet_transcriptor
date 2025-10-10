@@ -211,6 +211,51 @@ class LinkedInParser(BaseFacade):
                         "Their main focus includes creating web and mobile applications, "
                         "integrating AI solutions, and developing internal tools for medium-sized businesses."
                     )
+                },
+                {
+                    "name": "Oh My Grant",
+                    "description": (
+                        "Oh My Grant is an entrepreneurial startup focused on innovative technology solutions "
+                        "and supporting startups in scaling their business. The company develops custom software, "
+                        "consulting services, and digital tools for clients in multiple industries, "
+                        "helping businesses optimize their processes and adopt new technologies."
+                    )
+                },
+                {
+                    "name": "SoftServe",
+                    "description": (
+                        "SoftServe is a global IT consulting and software development company providing "
+                        "custom software, AI solutions, and IT consulting services across multiple industries. "
+                        "They focus on delivering end-to-end technology solutions, including cloud migration, "
+                        "data analytics, machine learning applications, and enterprise software development."
+                    )
+                },
+                {
+                    "name": "DevRain",
+                    "description": (
+                        "DevRain is a software development company offering full-cycle services, "
+                        "including AI and machine learning solutions, web development, and remote software support. "
+                        "The company works with international clients to build scalable applications, "
+                        "implement automation solutions, and enhance business workflows using modern technologies."
+                    )
+                },
+                {
+                    "name": "ACG",
+                    "description": (
+                        "ACG is a technology startup delivering software solutions and consulting services "
+                        "for businesses looking to implement innovative IT projects. "
+                        "They specialize in custom web and mobile applications, AI integration, "
+                        "and providing strategic guidance for digital transformation initiatives."
+                    )
+                },
+                {
+                    "name": "Smiddle",
+                    "description": (
+                        "Smiddle develops software solutions to improve business processes, "
+                        "with a focus on automation and optimizing company workflows. "
+                        "The company offers tools for data management, process optimization, "
+                        "and implementing AI-based solutions to increase efficiency and reduce operational costs."
+                    )
                 }
             ],
             "educations": [
