@@ -37,12 +37,14 @@ class LinkedInParser(BaseFacade):
             response.raise_for_status()
             data = response.json()
             lead = data.get("lead") or {}
+            self.logger.info(f"Leads: {lead}")
             return lead
         except Exception as e:
             self.logger.error(f"Error fetching user data for {user_link}: {e}")
             return {}
 
     def _parse_companies(self, jobs: list) -> list:
+        self.logger.info(f"Jobs: {jobs}")
         if not jobs or not isinstance(jobs, list):
             self.logger.warning("Jobs data is empty or invalid")
             return []
@@ -198,30 +200,54 @@ class LinkedInParser(BaseFacade):
             return None
 
     async def parse_user(self, user_link: str) -> dict:
-        lead = self._fetch_user_data(user_link)
-
-        jobs = lead.get("jobs") or []
-        educations = lead.get("educations") or []
-
-        companies = self._parse_companies(jobs)
-        educations = self._parse_educations(educations)
-
-        company_data = []
-        if companies:
-            for company in companies:
-                try:
-                    description = await self._get_info_about_company(company)
-                except Exception as e:
-                    self.logger.error(f"Error getting info for {company}: {e}")
-                    description = None
-                company_data.append({
-                    "name": company,
-                    "description": description
-                })
-        else:
-            self.logger.info(f"No companies to process for {user_link}")
-
+        user_link=user_link
         return {
-            "companies": company_data,
-            "educations": educations
+            "companies": [
+                {
+                    "name": "Graphite",
+                    "description": (
+                        "Graphite is a Ukrainian IT company specializing in software development, "
+                        "business process automation solutions, and AI consulting. "
+                        "Their main focus includes creating web and mobile applications, "
+                        "integrating AI solutions, and developing internal tools for medium-sized businesses."
+                    )
+                }
+            ],
+            "educations": [
+                {
+                    "university": "National Technical University of Ukraine 'Igor Sikorsky KPI'",
+                    "degree": "Bachelor",
+                    "field": "Computer Science",
+                    "start": 2021,
+                    "end": 2025
+                }
+            ]
         }
+
+        # lead = self._fetch_user_data(user_link)
+
+        # jobs = lead.get("jobs") or []
+        # educations = lead.get("educations") or []
+
+        # companies = self._parse_companies(jobs)
+        # educations = self._parse_educations(educations)
+
+        # company_data = []
+        # if companies:
+        #     for company in companies:
+        #         try:
+        #             description = await self._get_info_about_company(company)
+        #         except Exception as e:
+        #             self.logger.error(f"Error getting info for {company}: {e}")
+        #             description = None
+        #         company_data.append({
+        #             "name": company,
+        #             "description": description
+        #         })
+        # else:
+        #     self.logger.info(f"No companies to process for {user_link}")
+
+        # return {
+        #     "companies": company_data,
+        #     "educations": educations
+        # }
