@@ -204,67 +204,67 @@ class TranscriptManager(BaseFacade):
             self.logger.info("Test transcript alert sent via callback 1")
             
  
-            analysis_result = await self.router_agent.analyze_transcription(context_text)
+            # analysis_result = await self.router_agent.analyze_transcription(context_text)
             
-            self.logger.info("=== After calling router_agent.analyze_transcription ===")
-            self.logger.info(f"Analysis result type: {type(analysis_result)}")
-            self.logger.info(f"Analysis result value: {analysis_result}")
-            self.logger.info(f"Analysis result repr: {repr(analysis_result)}")
-            # If violation detected and callback is set, send alert to frontend
-            if analysis_result:
-                self.logger.info("Analysis result is not None, checking has_violation...")
-                self.logger.info(f"Attempting to get 'has_violation' key...")
+            # self.logger.info("=== After calling router_agent.analyze_transcription ===")
+            # self.logger.info(f"Analysis result type: {type(analysis_result)}")
+            # self.logger.info(f"Analysis result value: {analysis_result}")
+            # self.logger.info(f"Analysis result repr: {repr(analysis_result)}")
+            # # If violation detected and callback is set, send alert to frontend
+            # if analysis_result:
+            #     self.logger.info("Analysis result is not None, checking has_violation...")
+            #     self.logger.info(f"Attempting to get 'has_violation' key...")
                 
-                has_violation = analysis_result.get("has_violation")
-                self.logger.info(f"has_violation value: {has_violation}, type: {type(has_violation)}")
+            #     has_violation = analysis_result.get("has_violation")
+            #     self.logger.info(f"has_violation value: {has_violation}, type: {type(has_violation)}")
                 
-                if has_violation and self.violation_callback:
-                    self.logger.info("Violation detected and callback is set, preparing alert...")
-                    violation_alert = {
-                        "res": analysis_result.get("detailed_analysis", "")
-                    }
-                    await self.violation_callback(violation_alert)
-                    chunks_to_analyze.clear()
-                    self.logger.info("Violation detected and alert sent")
-            else:
-                self.logger.warning("Analysis result is None!")
+            #     if has_violation and self.violation_callback:
+            #         self.logger.info("Violation detected and callback is set, preparing alert...")
+            #         violation_alert = {
+            #             "res": analysis_result.get("detailed_analysis", "")
+            #         }
+            #         await self.violation_callback(violation_alert)
+            #         chunks_to_analyze.clear()
+            #         self.logger.info("Violation detected and alert sent")
+            # else:
+            #     self.logger.warning("Analysis result is None!")
 
-            self.last_chunks.append(full_text)
-            if len(self.last_chunks) > 2: 
-                self.last_chunks.pop(0)
+            # self.last_chunks.append(full_text)
+            # if len(self.last_chunks) > 2: 
+            #     self.last_chunks.pop(0)
 
-            if text_lines:
-                self.full_transcript_buffer.extend(text_lines)
-            else:
-                self.logger.warning("No transcript lines generated for this chunk")
+            # if text_lines:
+            #     self.full_transcript_buffer.extend(text_lines)
+            # else:
+            #     self.logger.warning("No transcript lines generated for this chunk")
 
-            if self.full_transcript_buffer and len(self.full_transcript_buffer) % 3 == 0: # changed from 6 to 3
-                self.logger.info(f"full_transcript_buffer {self.full_transcript_buffer}")
-                self.logger.info(f"full_transcript_buffer {self.full_transcript_buffer}")
-                meets = await self.db.get_meets(client_id=client_id, consultant_id=consultant_id)
+            # if self.full_transcript_buffer and len(self.full_transcript_buffer) % 3 == 0: # changed from 6 to 3
+            #     self.logger.info(f"full_transcript_buffer {self.full_transcript_buffer}")
+            #     self.logger.info(f"full_transcript_buffer {self.full_transcript_buffer}")
+            #     meets = await self.db.get_meets(client_id=client_id, consultant_id=consultant_id)
 
-                if meets:
-                    last_meet = meets[0]
-                    scenario_to_use = last_meet.next_meet_scenario
-                else:
-                    with open(r"src\backend\prompts\default_scenario\ds.txt", 
-                              "r", encoding="utf-8") as f:
-                        scenario_to_use = f.read()
+            #     if meets:
+            #         last_meet = meets[0]
+            #         scenario_to_use = last_meet.next_meet_scenario
+            #     else:
+            #         with open(r"src\backend\prompts\default_scenario\ds.txt", 
+            #                   "r", encoding="utf-8") as f:
+            #             scenario_to_use = f.read()
 
-                try:
-                    cumulative_text = "\n".join(self.full_transcript_buffer)
-                    validation_result = await self.router_agent.validate_chunk(
-                        cumulative_text, 
-                        scenario_to_use
-                    )
-                    self.logger.info(f"Scenario validation result: {validation_result}")
+            #     try:
+            #         cumulative_text = "\n".join(self.full_transcript_buffer)
+            #         validation_result = await self.router_agent.validate_chunk(
+            #             cumulative_text, 
+            #             scenario_to_use
+            #         )
+            #         self.logger.info(f"Scenario validation result: {validation_result}")
                     
-                    violation_alert = validation_result.get("deviation_details")
-                    if violation_alert != None:
-                        await self.violation_callback(violation_alert)
-                    self.full_transcript_buffer.clear() #JZ
-                except Exception as e:
-                    self.logger.error(f"Error during scenario validation: {e}")
+            #         violation_alert = validation_result.get("deviation_details")
+            #         if violation_alert != None:
+            #             await self.violation_callback(violation_alert)
+            #         self.full_transcript_buffer.clear() #JZ
+            #     except Exception as e:
+            #         self.logger.error(f"Error during scenario validation: {e}")
 
         except Exception as e:
             self.logger.error(f"Transcription error: {e}", exc_info=True)

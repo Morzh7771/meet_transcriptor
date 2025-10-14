@@ -94,8 +94,8 @@ async def start(request: StartMeetingRequest):
                 )
         
         # Find free ports
-        ws_port = await facade.find_free_port()
-        chat_port = await facade.find_free_port()
+        ws_port = 8192 #await facade.find_free_port()
+        chat_port = 8193 #await facade.find_free_port()
         
         # Ensure different ports
         while chat_port == ws_port:
@@ -124,7 +124,7 @@ async def start(request: StartMeetingRequest):
         
         # Get audio server instance and wait for it to be ready
         audio_server = await facade.get_or_create_audio_server(meet_code)
-        servers_ready = await audio_server.wait_until_ready(timeout=15)
+        servers_ready = await audio_server.wait_until_ready(timeout=20)
         
         if not servers_ready:
             # Clean up the task if servers didn't start
@@ -860,6 +860,79 @@ async def generate_scenario_for_user(request: ScenarioRequest):
     await db_facade.update_meet(request.meet_id, MeetUpdate(next_meet_scenario=scenario_text))
     return ScenarioResponse(scenario=scenario_text)
 
+@app.post("/generate_scenario_for_user_demo", response_model=ScenarioResponse, tags=["Scenarios"])
+async def generate_scenario_for_user_demo(request: ScenarioRequest):
+    await asyncio.sleep(6)  # Simulate processing delay
+    scenario_text = """ # Personalized Financial Scenario for Vitaliy Butko — Follow-Up Consultation Plan
+
+## Meeting Focus
+Third consultation — transition from initial setup to active investment and long-term wealth-building.  
+The objective of the next meeting is to review progress since Vitaliy’s post-graduation phase began, confirm completion of short-term goals, and introduce structured investment, tax planning, and insurance optimization strategies.
+
+---
+
+## Current Financial Status
+- **US Banking:** Checking and savings accounts successfully opened and active.  
+- **Emergency Fund:** Ongoing contributions of approximately $200/month; partial completion of target goal ($5,000–$10,000).  
+- **Credit Building:** Secured credit card in use; early credit history established with consistent on-time payments.  
+- **Employment:** Nearing completion of studies, currently preparing for first full-time role in the US tech sector.  
+- **Insurance:** Basic health coverage in place; no life or term insurance yet.  
+
+---
+
+## Next Meeting Objectives
+
+### 1. Finalize Emergency Fund
+- Confirm total amount saved and expected timeline to reach the target.  
+- Review opportunities to transfer part of savings into a **high-yield US account** with better APY.  
+- Discuss short-term liquidity needs before any investment actions.  
+
+### 2. Launch Roth IRA
+- Verify eligibility and initiate **Roth IRA** setup immediately upon receiving first paycheck.  
+- Decide between provider options (Fidelity, Schwab, Vanguard).  
+- Set an automatic monthly contribution plan (target: $400–$500/month).  
+- Select low-cost **index ETF** portfolio aligned with long-term growth.  
+
+### 3. Investment Portfolio Foundation
+- Once the emergency fund is complete, allocate surplus cash to a **brokerage account**.  
+- Discuss risk tolerance and diversification strategy (US equities, global ETFs, tech sector exposure).  
+- Emphasize long-term consistency over short-term market timing.  
+
+### 4. Credit and Financial Identity Growth
+- Evaluate first credit score report; adjust card usage for optimal utilization (under 30%).  
+- Explore options for a **starter unsecured credit card** after six months of responsible usage.  
+- Introduce budgeting automation tools (YNAB, Mint, or bank-integrated systems).  
+
+### 5. Insurance and Protection Planning
+- Review available health insurance plans post-graduation.  
+- Introduce **term life insurance** for family protection given marital status.  
+- Discuss creating **basic estate documents** (will, power of attorney) within 12 months of employment.  
+
+### 6. Tax and Cross-Border Readiness
+- Prepare for first US tax filing as a resident with potential Ukrainian income records.  
+- Schedule a consultation with a **cross-border tax professional** to ensure compliance.  
+- Identify possible deductions (education, relocation, and startup work expenses).
+
+---
+
+## Long-Term Vision
+- Maintain discipline in savings and contributions regardless of market fluctuations.  
+- Build a clear investment habit and track net worth growth quarterly.  
+- Review the overall plan annually, adjusting for income growth, family expansion, and residency changes.
+
+---
+
+## Next Meeting Preparation
+- Bring updated account balances (checking, savings, credit card).  
+- Provide details of any new employment offer and salary structure.  
+- Prepare initial investment preferences or risk comfort level.  
+- Advisor will present:  
+  - Roth IRA provider comparison  
+  - ETF portfolio simulation (conservative, balanced, growth)  
+  - Updated savings-to-investment transition roadmap
+"""
+    return ScenarioResponse(scenario=scenario_text)
+
 @app.post("/generate_scenario_for_user_first", response_model=ScenarioResponseFirst, tags=["Scenarios"])
 async def generate_scenario_for_user_first(request: ScenarioRequestFirst):
     meet_id = await db_facade.create_meet(MeetCreate(
@@ -872,6 +945,86 @@ async def generate_scenario_for_user_first(request: ScenarioRequestFirst):
     scenario_text = scenario.choices[0].message.content
     await db_facade.update_meet(meet_id, MeetUpdate(next_meet_scenario=scenario_text))
     return ScenarioResponseFirst(scenario=scenario_text,meet_id=meet_id)
+
+@app.post("/generate_scenario_for_user_first_demo", response_model=ScenarioResponseFirst, tags=["Scenarios"])
+async def generate_scenario_for_user_first_demo(request: ScenarioRequestFirst):
+    await asyncio.sleep(6)  # Simulate processing delay
+    scenario_text = """"# Personalized Financial Scenario for Vitaliy Butko
+
+## Current Financial Situation Analysis
+Vitaliy, you are a **21-year-old married Ukrainian national** residing in **Aliceville, New York**. You are currently pursuing a **Bachelor's degree in Computer Science** at the *National Technical University of Ukraine "Igor Sikorsky KPI"*, expected to graduate in **December 2025**. You hold a valid Ukrainian passport with a clear identification record. Your marital status, student status, and international background all present unique planning opportunities and considerations.
+
+Based on your current situation, you are likely relying on a mix of family support, potential student income, and possibly some savings. You do not currently list employment, but your imminent graduation means that **income and career planning** should be top priorities. Given your young age, you have a powerful compounding window for long-term investments, but specific planning is required to maximize your advantages and protect your growing family’s financial future.
+
+---
+
+## Recommended Financial Products and Plan Optimizations
+Drawing on best practices from similar clients (tech or engineering students in their early 20s, preparing to enter the US job market), the following strategies are recommended:
+
+- **Student-Friendly Banking Solutions:** Open or optimize checking/savings accounts with no/minimal fees, international transfer capability, and robust mobile features.  
+- **High-Yield Savings Account:** Set up a dedicated emergency fund, aiming for **3–6 months** of living expenses, in a high-yield account accessible in the US.  
+- **Roth IRA / Traditional IRA:** If you have (or as soon as you have) qualifying US-earned income, prioritize maxing out **Roth IRA** contributions due to your low current tax bracket and long investment horizon.  
+- **Investment Account (Brokerage):** For savings above your emergency fund, open a low-cost brokerage account for diversified, long-term investment (focus on index and ETF funds), emphasizing US and global equities.  
+- **Insurance Review:** Obtain basic health insurance (if not already provided), and review options for affordable term life insurance given your marital status.  
+- **Credit Building:** Begin building US credit through a secured or starter credit card, paying off balances monthly.  
+- **Tax Optimization:** As an international student, maximize applicable education credits/deductions and prepare for cross-border tax issues as you transition to post-graduate employment.
+
+---
+
+## Specific Goals and Steps to Achieve Them
+
+### Goal 1: Establish US Financial Foundations
+- Open US checking/savings, credit card, and high-yield savings for emergency fund.  
+- Set up direct deposit for any US-based income.
+
+### Goal 2: Begin Retirement Savings Early
+- As soon as you earn US income post-graduation, open and contribute to a **Roth IRA** (up to annual IRS limit).  
+- Target a minimum **15–20%** investment rate for retirement from the start of your full-time employment.
+
+### Goal 3: Build an Emergency Fund and Start Investing
+- Save at least **$5,000–$10,000** in a high-yield savings account by the end of your first employment year.  
+- Set up automatic monthly contributions to a low-cost brokerage account (focus on broad US/Global ETFs).
+
+### Goal 4: Establish and Protect Credit
+- Use a secured credit card with a small monthly spend and full repayment to start building your credit score.
+
+### Goal 5: Tax Planning Readiness
+- Consult with a cross-border tax professional as you transition to work in the US, to ensure compliance and maximize credits.
+
+### Goal 6: Beneficiary & Estate Planning
+- Review and update beneficiary designations as your family situation changes; consider a basic will/power of attorney within two years of full-time employment.
+
+---
+
+## Time Frames and Milestone Checkpoints
+- **Immediate (now to graduation):** Open foundational accounts, create basic budget, explore credit-building, review insurance needs.  
+- **Short-Term (Year 1 after graduation, 2026):** Secure first US job, open Roth IRA, reach $5k in emergency fund, begin investing.  
+- **Medium-Term (2–3 years post-grad, 2027–2028):** Max out IRA contributions annually, grow investments, maintain and improve credit.  
+- **Long-Term (5+ years):** Increase retirement/investment contributions in line with income increases; revisit risk profile, beneficiary designations, and long-term goals at each annual review.
+
+---
+
+## Potential Risks and Ways to Minimize Them
+- **Income Volatility:** Mitigated by robust emergency savings and diversified investments.  
+- **Currency / Residency Uncertainty:** Maintain dual-currency / banking options; work with professionals on cross-border banking/tax issues.  
+- **Healthcare Gaps:** Ensure continuous health coverage, even during job transitions.  
+- **Market Risk:** Rely predominantly on diversified, low-fee index funds; avoid concentrated bets.
+
+---
+
+## Beneficiary Planning Considerations
+Currently, you have yourself listed as the 100% primary beneficiary. As you are married, and as your family grows, we recommend:
+
+- Update beneficiary designations on all financial and retirement accounts to include your spouse.  
+- Consider establishing legal healthcare / power of attorney and a basic will post-graduation.  
+- Revisit beneficiary structures annually or with life changes (children, property, etc.).
+
+---
+
+## Summary
+In this initial planning stage, your focus should be on building a **solid US financial foundation**, aggressively starting retirement savings, maximizing tax efficiency, and building credit. These steps position you and your spouse for long-term financial security and flexibility as your career develops. We will review progress at each annual meeting, adjusting milestones and recommendations as needed with your changing life stages.
+"""
+    return ScenarioResponseFirst(scenario=scenario_text,meet_id="22a4e39b-8448-430e-b917-d47deb01095f")
 
 # ============ LINKEDIN PARSER ENDPOINTS ============
 @app.post("/parse-linkedin", response_model=LinkedInParseResponse, tags=["LinkedIn"])
@@ -945,3 +1098,50 @@ async def parse_linkedin_profile(request: LinkedInParseRequest):
             status_code=500,
             detail=f"Error parsing LinkedIn profile: {str(e)}"
         )
+        
+
+@app.post("/law_test")
+async def law_test(request: DemoAlertRequest):
+    """
+    DEMO endpoint: emit a law violation alert to the violations WebSocket.
+    Body: { "meet_code": "<meet_id>" }
+    """
+    try:
+        # Отправляем только payload, который обернется в send_chat_demo_alert
+        alert_payload = {
+            "res": """You have violated financial regulation §1020.320 — advising on avoiding federal reporting requirements for international transfers. Please be careful."""
+        }
+        
+        sent = await facade.send_chat_demo_alert(request.meet_code, alert_payload)
+        return {
+            "ok": True, 
+            "sent": sent, 
+            "meet_code": request.meet_code, 
+            "type": "law_violation"
+        }
+    except Exception as e:
+        facade.logger.error(f"Failed to send law test alert: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Failed to send demo alert: {e}")
+
+
+@app.post("/miss_plan")
+async def miss_plan(request: DemoAlertRequest):
+    """
+    DEMO endpoint: emit a scenario deviation alert to the violations WebSocket.
+    Body: { "meet_code": "<meet_id>" }
+    """
+    try:
+        alert_payload = {
+            "res": """The suggested ETF investment conflicts with Vitaliy’s approved financial scenario — emergency fund security should take precedence before market exposure."""
+        }
+        
+        sent = await facade.send_chat_demo_alert(request.meet_code, alert_payload)
+        return {
+            "ok": True, 
+            "sent": sent, 
+            "meet_code": request.meet_code, 
+            "type": "scenario_deviation"
+        }
+    except Exception as e:
+        facade.logger.error(f"Failed to send miss plan alert: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Failed to send demo alert: {e}")

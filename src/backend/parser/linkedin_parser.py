@@ -201,6 +201,7 @@ class LinkedInParser(BaseFacade):
 
     async def parse_user(self, user_link: str) -> dict:
         user_link=user_link
+        await asyncio.sleep(5)
         return {
             "companies": [
                 {

@@ -14,7 +14,8 @@ class MeetBotChat(BaseModel):
     message: str
     meet_id: str
     
-    
+class DemoAlertRequest(BaseModel):
+    meet_code: str
 class GetChatTopics(BaseModel):
     meet_id: str
 

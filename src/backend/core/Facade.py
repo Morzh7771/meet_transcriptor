@@ -2,6 +2,7 @@ import os
 import socket
 import random
 import asyncio
+import json
 from uuid import uuid4
 from src.backend.api.js_plagin_api import JsPluginApi
 from src.backend.audio.audio_server import AudioServer
@@ -24,6 +25,7 @@ class Facade(BaseFacade):
         # Dictionary to store AudioServer instances by meet_code for parallel sessions
         self._audio_servers = {}
         self._audio_servers_lock = asyncio.Lock()
+        
         
     async def get_or_create_audio_server(self, meet_code: str) -> AudioServer:
         """
@@ -231,3 +233,25 @@ class Facade(BaseFacade):
         chatID = chat_id if chat_id is not None else str(uuid4())
         result = await self.chat_bot.process_meet_questions(chatID, meetId, message)
         return chatID, result
+    
+    async def send_chat_demo_alert(self, meet_code: str, payload: dict) -> bool:
+        """Send a prepared alert payload to the chat WebSocket for a given meeting.
+
+        The payload will be wrapped into the chat channel envelope:
+            { "type": "chat_response", "message": <payload> }
+        """
+        async with self._audio_servers_lock:
+            server = self._audio_servers.get(meet_code)
+        if not server:
+            raise RuntimeError(f"No AudioServer for meet_code={meet_code}")
+        ws = getattr(server, "violations_ws", None)
+        if not ws:
+            self.logger.warning(f"Chat WS not connected for meet_code={meet_code}")
+            return False
+        try:
+            await ws.send(json.dumps({"type": "violation_detected", "data": payload}, ensure_ascii=False))
+            self.logger.info(f"Demo alert sent to chat WS for {meet_code}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to send demo alert to chat WS for {meet_code}: {e}")
+            return False
