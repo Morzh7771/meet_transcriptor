@@ -1,91 +1,117 @@
-# UV Sync
+# Meet Transcript
 
-## Installation
+Транскрипция Google Meet в реальном времени: заходишь на мит → нажимаешь Start → текст появляется в мини-окне расширения.
 
-### 1. Install Node.js dependencies
+---
+
+## Что нужно
+
+- **Python 3.12+** (рекомендуется [uv](https://docs.astral.sh/uv/))
+- **Chrome** (или другой Chromium-браузер)
+- **OpenAI API ключ** (для Whisper) — в `.env`
+
+---
+
+## 1. Настройка
+
+### Клонируй репозиторий и перейди в папку проекта
 
 ```bash
-cd js
-npm init
-cd ..
+cd /path/to/js_plagin
 ```
 
-### 2. Activate Python virtual environment
+### Создай `.env` из примера
 
-**For Windows (PowerShell):**
-```powershell
-.\.venv\Scripts\activate.ps1
-```
-
-**For Bash (Linux/macOS):**
 ```bash
-source .venv/bin/activate
+cp .env_example .env
 ```
 
-## How to Run
+В `.env` укажи:
 
-### Server environment (headless / without GUI)
+- **`OPENAI_API_KEY`** — ключ OpenAI (Whisper для транскрипции), обязателен.
+- **`SQL_HOST`**, **`SQL_USER`**, **`SQL_PASSWORD`**, **`SQL_NAME`**, **`SQL_PORT`** — если бэкенд при старте пишет ошибку про БД, настрой подключение к MySQL (или подставь свои значения под твою СУБД).
 
-**Terminal 1:**
+### Установи зависимости (через uv)
+
 ```bash
-su - pulseuser -c "pulseaudio --start"
-xvfb-run -a node js/main.js
+uv sync
 ```
 
-**Terminal 2:**
+Или через pip:
+
 ```bash
-python3 main.py
+pip install -e .
+# или: pip install -r requirements.txt  (если есть)
 ```
 
-### Local environment (with GUI access)
+---
 
-**Terminal 1:**
+## 2. Запуск бэкенда
+
+Один терминал — только API:
+
 ```bash
-node js/main.js
+uv run python main.py
 ```
 
-**Terminal 2:**
+Или без uv:
+
 ```bash
-python3 main.py
+python main.py
 ```
 
-## Project Architecture 
-```bash
-├── main.py                     # Entry point
-├── .env                        # Configuration 
-├── recordings/                 # Saved session data
-│   ├── audio/                  # .webm audio chunks
-│   ├── transcripts/            # Text transcripts and speaker data
-│   └── full/                   # Merged outputs (text, audio, JSON)
-├── js/                          
-│   ├── meet_record.js          # Main automation script (logs in, joins Meet, streams audio + speaker data)
-│   ├── first_login.js          # Separate login flow with 2FA handling
-│   └── server.js               # Express.js API server for controlling the bot
-├── src/
-│   └── backend/
-│       ├── core/
-│       │   └── facade.py               # Orchestrates the entire flow
-│       ├── audio/
-│       │   ├── audio_server.py         # WebSocket server for audio input
-│       │   ├── chunk_handler.py        # Handles buffering and chunk finalization
-│       │   ├── transcript_manager.py   # Sends audio to Whisper and saves results
-│       │   └── speaker_tracker.py      # Tracks active speakers
-│       ├── llm/
-│       │   └── transcriber.py          # OpenAI Whisper API wrapper
-│       ├── api/
-│       │   └── js_plagin_api.py        # HTTP client for Node.js server
-│       └── utils/
-│           └── logger.py               # Custom logger
+Должно появиться что-то вроде:
+
+```
+INFO:     Uvicorn running on http://0.0.0.0:8000
 ```
 
-## Run docker-compose file to enable weaviate
-```bash
-    # Create directory for saving data
-    mkdir -p qdrant_storage
+Проверка: открой в браузере **http://127.0.0.1:8000** — должен вернуться `{"status":"ok", ...}`.
 
-    # activate containers
-    docker-compose up -d
+---
 
-    # check status
-    docker-compose ps
-    ```
+## 3. Установка расширения в Chrome
+
+1. Открой Chrome → **Расширения** → **Управление расширениями** (или `chrome://extensions/`).
+2. Включи **Режим разработчика** (переключатель справа вверху).
+3. Нажми **Загрузить распакованное расширение**.
+4. Укажи папку **`extension`** этого проекта:  
+   `.../js_plagin/extension`
+5. Расширение появится в списке (например, «Meet Transcript»).
+
+---
+
+## 4. Как пользоваться
+
+1. **Бэкенд должен быть запущен** (`python main.py`), расширение — включено.
+2. Зайди на **https://meet.google.com** и открой или создай встречу (например, по ссылке с кодом вида `abc-defg-hij`).
+3. Когда окажешься **в мите** (видишь себя и других участников), слева внизу появится панель расширения:
+   - заголовок **Transcript**
+   - кнопка **Start**
+   - поле для текста транскрипта
+4. Нажми **Start**.  
+   При первом запуске браузер может запросить доступ к микрофону и к вкладке — разреши.
+5. Говори в мите — текст будет появляться в окне транскрипта в реальном времени.
+6. Остановить: нажми **Stop** в той же панели.
+
+---
+
+## Кратко по шагам
+
+| Шаг | Действие |
+|-----|----------|
+| 1 | `cp .env_example .env` и прописать `OPENAI_API_KEY` |
+| 2 | `uv sync` (или `pip install -e .`) |
+| 3 | `uv run python main.py` — запуск API на :8000 |
+| 4 | Chrome → Расширения → Загрузить распакованное → папка `extension` |
+| 5 | Зайти в Google Meet → в мите нажать **Start** в панели расширения |
+
+---
+
+## Если что-то не работает
+
+- **Панель не появляется** — убедись, что открыт именно мит (есть код встречи в URL и ты внутри звонка).
+- **«Failed to start» / ошибка при Start** — проверь, что бэкенд запущен на `http://127.0.0.1:8000` и что в консоли расширения (F12 → вкладка расширения или страница мита) нет блокировок CORS/сети.
+- **Нет транскрипта** — проверь микрофон и доступ к вкладке; в `.env` должен быть валидный `OPENAI_API_KEY`.
+
+API бэкенда: **http://127.0.0.1:8000** (старт сессии: `POST /start` с телом `{"meet_code": "xxx-yyyy-zij", "meeting_language": "en"}`).

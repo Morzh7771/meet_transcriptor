@@ -1,8 +1,10 @@
 from openai import AsyncOpenAI
 import instructor
+from groq import AsyncGroq
 from pydantic import BaseModel
 from src.backend.utils.configs import Config
 from src.backend.utils.logger import CustomLog
+
 
 class BaseFacade:
 
@@ -18,6 +20,7 @@ class BaseFacade:
         self.logger = CustomLog()
         self.raw_client = AsyncOpenAI(api_key=self.configs.openai.API_KEY.get_secret_value())
         self.client = instructor.from_openai(self.raw_client)
+        self.groq_client = AsyncGroq(api_key=self.configs.groq.API_KEY.get_secret_value())
 
     async def completion(self, model: str, messages: list[dict],
                          max_tokens: int = 1000, temperature: float = 0.5, 
@@ -31,31 +34,30 @@ class BaseFacade:
         return response
 
     async def audio_completion(self, webm_file: str,
-                               data: str,
-                               return_segments: bool = False, 
+                               data: bytes,
+                               return_segments: bool = False,
                                language: str = None):
-        
-        arguments_dict = dict(
-            model="whisper-1",
-            file=(webm_file, data),
-            response_format="verbose_json" if return_segments else "text"
-        )
-
+        """Transcribe audio via Groq (whisper-large-v3-turbo)."""
+        kwargs = {
+            "file": ("audio.webm", data),
+            "model": "whisper-large-v3-turbo",
+            "response_format": "verbose_json",
+            "temperature": 0.0,
+        }
         if language:
-            arguments_dict["language"] = language
+            kwargs["language"] = language
 
-        response = await self.client.audio.transcriptions.create(
-            **arguments_dict
-        )
+        transcription = await self.groq_client.audio.transcriptions.create(**kwargs)
+
+        text = getattr(transcription, "text", None) or (transcription if isinstance(transcription, str) else "")
+        segments_raw = getattr(transcription, "segments", None) or []
+
         if return_segments:
-            return {
-                "text": response.text,
-                "segments": [
-                    {
-                        "start": s.start,
-                        "end": s.end,
-                        "text": s.text
-                    } for s in response.segments
-                ]
-            }
-        return response
+            segments = []
+            for s in segments_raw:
+                if isinstance(s, dict):
+                    segments.append({"start": s.get("start", 0), "end": s.get("end", 0), "text": s.get("text", "")})
+                else:
+                    segments.append({"start": getattr(s, "start", 0), "end": getattr(s, "end", 0), "text": getattr(s, "text", "")})
+            return {"text": text, "segments": segments}
+        return text

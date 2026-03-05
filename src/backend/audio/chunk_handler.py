@@ -13,6 +13,7 @@ class ChunkHandler():
         self.logger = CustomLog()
         self.is_new_chunk = False  # Track if this is start of new chunk after restart
         self.chunk_valid = False  # Track if current chunk is valid (after restart)
+        self.finalized_chunk_start_time = self.t0  # Start of chunk we save (set when copying to finalized)
 
     def set_paths(self, paths):
         self.paths = paths
@@ -23,9 +24,10 @@ class ChunkHandler():
 
     def mark_new_chunk_start(self):
         """Mark that we're starting a new chunk after MediaRecorder restart"""
-        # Move current buffer to finalized if it's valid
+        # Move current buffer to finalized if it's valid; remember start of that chunk (previous t0)
         if self.chunk_valid and self.current_chunk_buffer:
             self.finalized_chunk_buffer = bytearray(self.current_chunk_buffer)
+            self.finalized_chunk_start_time = self.t0  # Start of the chunk we're saving
             self.logger.info(f"Marked {len(self.finalized_chunk_buffer)} bytes as finalized chunk data")
         
         # Reset current buffer for new chunk
@@ -55,6 +57,9 @@ class ChunkHandler():
         if not self.finalized_chunk_buffer:
             self.logger.warning("No finalized chunk buffer to save")
             return None, None, None
+        if not self.paths:
+            self.logger.warning("finalize_chunk: paths not set")
+            return None, None, None
 
         timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
         webm_path = os.path.join(self.paths["audio"], f"chunk_{timestamp}.webm")
@@ -66,8 +71,8 @@ class ChunkHandler():
         file_size = len(self.finalized_chunk_buffer)
         self.logger.info(f"Saved finalized audio chunk: {webm_path} ({file_size} bytes)")
 
-        # Calculate chunk start time in milliseconds
-        chunk_start_time = int(self.t0 * 1000)
+        # Start time of the chunk we saved (set when we copied buffer in mark_new_chunk_start)
+        chunk_start_time = int(self.finalized_chunk_start_time * 1000)
         
         # Clear the finalized buffer after saving
         self.finalized_chunk_buffer.clear()
@@ -80,13 +85,11 @@ class ChunkHandler():
         return webm_path, timestamp, chunk_start_time
 
     def finalize(self):
-        """Legacy method for compatibility - try to save whatever we have"""
-        # This should only be called at session end
+        """Save remaining buffer at session end (last chunk)."""
         if self.chunk_valid and self.current_chunk_buffer:
-            # If we have valid current data, treat it as finalized
             self.finalized_chunk_buffer = bytearray(self.current_chunk_buffer)
+            self.finalized_chunk_start_time = self.t0  # Start of this chunk
             self.current_chunk_buffer.clear()
-        
         return self.finalize_chunk()
 
     def reset_for_restart(self):

@@ -160,15 +160,15 @@ const captureDesktop = async () => {
 };
 
 // Backend session / WebSocket
+const DEFAULT_CLIENT_ID = "00000000-0000-0000-0000-000000000001";
+const DEFAULT_CONSULTANT_ID = "00000000-0000-0000-0000-000000000002";
+
 const startSession = async () => {
   try {
     const meetCode = getRoomIdFromUrl(config.room) || config.room;
-    console.log(config.clientId,config.consultantId)
-     const requestBody = {
-      client_id: config.clientId || "d4dee85f-ebf7-46d3-a60f-a562d12bd328",
-      consultant_id: config.consultantId || "68f997c0-95d5-4c88-b0c6-c5c13061ec2a",
+    const requestBody = {
       meet_code: meetCode,
-      meeting_language: "en"
+      meeting_language: config.meeting_language || "uk"
     };
 
     const res = await fetch(`${config.apiBase}/start`, {
@@ -459,6 +459,7 @@ const connectWebSocket = async () => {
               data: {
                 room: config.room,
                 processed_text: data.text,
+                segments: data.segments || [],
                 transcribed: true,
                 timestamp: data.timestamp
               }
@@ -676,20 +677,16 @@ const startCapture = async (opts = {}) => {
     room: opts.room || String(Date.now()),
     chunkMs: Math.max(1000, Math.min(120000, opts.chunkMs || config.chunkMs)),
     desktop: !!opts.desktop,
-    clientId: opts.clientId,
-    consultantId: opts.consultantId
+    meeting_language: opts.meeting_language || "uk"
   });
 
   isRunning = true;
   isRestarting = false;
 
   try {
-    console.log("[offscreen] Capturing audio streams first");
-    
-    // Get mic stream first
+    // 1) Select and capture both sources first; only then call backend (no delay, no discard)
+    console.log("[offscreen] Selecting microphone and window/tab…");
     micStream = await captureMic();
-    
-    // Get tab/desktop stream using improved logic - FIRST before WebSocket
     try {
       if (config.desktop) {
         tabStream = await captureDesktop();
@@ -699,7 +696,6 @@ const startCapture = async (opts = {}) => {
     } catch (e) {
       console.warn("[offscreen] Primary capture failed:", e);
       if (config.desktop) {
-        // Fallback to tab capture if desktop fails
         try {
           tabStream = await captureTab();
           console.log("[offscreen] Fallback to tab audio successful");
@@ -712,28 +708,33 @@ const startCapture = async (opts = {}) => {
       }
     }
 
-    // Verify we have at least one audio source
     const hasTabAudio = tabStream?.getAudioTracks().length > 0;
     const hasMicAudio = micStream?.getAudioTracks().length > 0;
-    
     if (!hasTabAudio && !hasMicAudio) {
-      throw new Error("No audio sources available");
+      throw new Error("No audio sources available. Please allow microphone and choose a tab/window.");
     }
-    
-    console.log("[offscreen] Audio sources - Tab:", hasTabAudio, "Mic:", hasMicAudio);
+    console.log("[offscreen] Both sources ready - Tab:", hasTabAudio, "Mic:", hasMicAudio);
 
-    // Only after successful audio capture, connect to backend
-    console.log("[offscreen] Starting WebM session and requesting WebSocket port");
+    // 2) Only after both sources are ready, request backend (so backend accepts audio immediately)
+    console.log("[offscreen] Requesting backend session (WebSocket ports)");
     await startSession();
 
-    console.log("[offscreen] Waiting 5s for backend to open WebSocket port");
-    await new Promise(r => setTimeout(r, 20000));
-
-    console.log("[offscreen] Connecting WebSocket");
-    await connectWebSocket();
-
-    console.log("[offscreen] Connecting Chat WebSocket");
-    await connectChatWebSocket();
+    // Retry WebSocket connect (backend may need a moment to bind ports)
+    const maxWaitMs = 20000;
+    const stepMs = 500;
+    let connected = false;
+    for (let elapsed = 0; elapsed < maxWaitMs && isRunning; elapsed += stepMs) {
+      try {
+        await connectWebSocket();
+        await connectChatWebSocket();
+        connected = true;
+        break;
+      } catch (e) {
+        if (elapsed + stepMs >= maxWaitMs) throw e;
+        await new Promise(r => setTimeout(r, stepMs));
+      }
+    }
+    if (!connected) throw new Error("WebSocket connect timeout");
 
     // Start recording with the captured streams
     await startWebMRecorder();

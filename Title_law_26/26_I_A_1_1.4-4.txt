@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?> 
-<DIV8 N="1.4-4" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-26/section-1.4-4&quot;,&quot;citation&quot;:&quot;26 CFR 1.4-4&quot;}">
-<HEAD>Â§ 1.4-4 Short taxable year caused by death.</HEAD>
-<P>An individual making a return for a period of less than 12 months on account of a change in his accounting period may not elect to pay the optional tax under section 3. However, the fact that the taxable year is less than 12 months does not prevent the determination of the tax for the taxable year under section 3 if the short taxable year results from the death of the taxpayer.</P>
-</DIV8>

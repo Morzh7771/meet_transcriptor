@@ -79,16 +79,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case "start":
           await ensureMicPermissionFixed();
           {
-            // Pass through clientId and consultantId from opts
             const opts = msg.opts || {};
-            const startResp = await offscreenSend({ 
-              type: "offscreen-start", 
-              opts: {
-                apiBase: opts.apiBase,
-                room: opts.room,
-                clientId: opts.clientId,
-                consultantId: opts.consultantId
-              }
+            const startResp = await offscreenSend({
+              type: "offscreen-start",
+              opts: { apiBase: opts.apiBase, room: opts.room }
             });
             isRecording = !!(startResp?.ok);
             sendResponse({ ok: isRecording });
