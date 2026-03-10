@@ -2,18 +2,17 @@ import os
 import time
 from src.backend.utils.logger import CustomLog
 
-class ChunkHandler():
+class ChunkHandler:
     def __init__(self, chunk_duration=10):
-        super().__init__()
         self.current_chunk_buffer = bytearray()
         self.finalized_chunk_buffer = bytearray()
         self.t0 = time.time()
         self.chunk_duration = chunk_duration
         self.paths = None
         self.logger = CustomLog()
-        self.is_new_chunk = False  # Track if this is start of new chunk after restart
-        self.chunk_valid = False  # Track if current chunk is valid (after restart)
-        self.finalized_chunk_start_time = self.t0  # Start of chunk we save (set when copying to finalized)
+        self.is_new_chunk = False
+        self.chunk_valid = False
+        self.finalized_chunk_start_time = self.t0
 
     def set_paths(self, paths):
         self.paths = paths
@@ -23,14 +22,13 @@ class ChunkHandler():
         self.current_chunk_buffer += data
 
     def mark_new_chunk_start(self):
-        """Mark that we're starting a new chunk after MediaRecorder restart"""
-        # Move current buffer to finalized if it's valid; remember start of that chunk (previous t0)
-        if self.chunk_valid and self.current_chunk_buffer:
+        # Save current buffer regardless of chunk_valid flag — first call also has valid data
+        if self.current_chunk_buffer:
             self.finalized_chunk_buffer = bytearray(self.current_chunk_buffer)
-            self.finalized_chunk_start_time = self.t0  # Start of the chunk we're saving
+            self.finalized_chunk_start_time = self.t0
             self.logger.info(f"Marked {len(self.finalized_chunk_buffer)} bytes as finalized chunk data")
-        
-        # Reset current buffer for new chunk
+        else:
+            self.logger.warning("mark_new_chunk_start: current_chunk_buffer is empty, nothing to finalize")
         self.current_chunk_buffer.clear()
         self.t0 = time.time()
         self.chunk_valid = True
@@ -38,22 +36,18 @@ class ChunkHandler():
         self.logger.info("Marked new chunk start after MediaRecorder restart")
 
     def has_valid_data(self):
-        """Check if we have valid finalized data ready to save"""
         return len(self.finalized_chunk_buffer) > 0 and self.chunk_valid
 
     def has_data(self):
-        """Check if we have any data (for backward compatibility)"""
         return len(self.current_chunk_buffer) > 0 or len(self.finalized_chunk_buffer) > 0
 
     def discard_current_buffer(self):
-        """Discard current buffer (used when data might be corrupted)"""
         discarded_size = len(self.current_chunk_buffer)
         self.current_chunk_buffer.clear()
         self.chunk_valid = False
         self.logger.warning(f"Discarded {discarded_size} bytes of potentially corrupted data")
 
     def finalize_chunk(self):
-        """Save the finalized chunk that was properly ended by MediaRecorder restart"""
         if not self.finalized_chunk_buffer:
             self.logger.warning("No finalized chunk buffer to save")
             return None, None, None
@@ -64,20 +58,13 @@ class ChunkHandler():
         timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
         webm_path = os.path.join(self.paths["audio"], f"chunk_{timestamp}.webm")
 
-        # Save the finalized buffer
         with open(webm_path, "wb") as f:
             f.write(self.finalized_chunk_buffer)
         
         file_size = len(self.finalized_chunk_buffer)
         self.logger.info(f"Saved finalized audio chunk: {webm_path} ({file_size} bytes)")
-
-        # Start time of the chunk we saved (set when we copied buffer in mark_new_chunk_start)
         chunk_start_time = int(self.finalized_chunk_start_time * 1000)
-        
-        # Clear the finalized buffer after saving
         self.finalized_chunk_buffer.clear()
-        
-        # Validate the saved file
         if os.path.getsize(webm_path) < 1024:
             self.logger.error(f"Saved chunk is too small ({file_size} bytes), likely corrupted")
             return None, None, None
@@ -85,21 +72,16 @@ class ChunkHandler():
         return webm_path, timestamp, chunk_start_time
 
     def finalize(self):
-        """Save remaining buffer at session end (last chunk)."""
-        if self.chunk_valid and self.current_chunk_buffer:
+        if self.current_chunk_buffer:
             self.finalized_chunk_buffer = bytearray(self.current_chunk_buffer)
-            self.finalized_chunk_start_time = self.t0  # Start of this chunk
+            self.finalized_chunk_start_time = self.t0
             self.current_chunk_buffer.clear()
         return self.finalize_chunk()
 
     def reset_for_restart(self):
-        """Reset buffer and timer for MediaRecorder restart without saving"""
-        # This method is deprecated - use mark_new_chunk_start instead
         self.current_chunk_buffer.clear()
         self.t0 = time.time()
         self.logger.info("Chunk buffer reset for MediaRecorder restart")
 
     def should_finalize(self):
-        """Check if enough time has passed for a new chunk"""
-        should_finalize = time.time() - self.t0 >= self.chunk_duration
-        return should_finalize
+        return time.time() - self.t0 >= self.chunk_duration

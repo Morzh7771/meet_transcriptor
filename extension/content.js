@@ -1,6 +1,5 @@
 /**
- * Minimal: зашёл на мит → кнопка Start → транскрипт в реальном времени в мини-окне.
- * Без доп. полей (Client ID, Consultant ID и т.д.).
+ * Meet transcript: Start/Stop — record full meeting, then full transcript (no real-time window).
  */
 (() => {
   if (window.top !== window.self) return;
@@ -13,40 +12,21 @@
   if (!MEET_CODE) return;
 
   const ROOM = MEET_CODE;
-  let panel, startStopBtn, statusEl, transcriptEl;
+  let panel, startStopBtn, statusEl;
   let isRecording = false;
   let speakerMonitorInterval = null;
   let inMeeting = false;
   let lastMuted = null;
   let currentSpeakerStates = {};
-
-  const pad = (n) => String(Math.floor(n)).padStart(2, "0");
-  const formatSegment = (s) => {
-    const sh = Math.floor(s.start_sec / 3600), sm = Math.floor((s.start_sec % 3600) / 60), ss = Math.floor(s.start_sec % 60);
-    const eh = Math.floor(s.end_sec / 3600), em = Math.floor((s.end_sec % 3600) / 60), es = Math.floor(s.end_sec % 60);
-    return `(${pad(sh)}:${pad(sm)}:${pad(ss)}-${pad(eh)}:${pad(em)}:${pad(es)}) ${s.speaker || "Unknown"}: ${(s.text || "").trim()}`;
-  };
-
-  const addTranscript = (textOrSegments) => {
-    if (!transcriptEl) return;
-    let text = "";
-    if (Array.isArray(textOrSegments) && textOrSegments.length > 0) {
-      text = textOrSegments.map((s) => formatSegment(s)).join("\n");
-    } else if (typeof textOrSegments === "string" && (text = textOrSegments.trim())) {
-      // already formatted
-    }
-    if (!text) return;
-    const cur = transcriptEl.value || "";
-    // Chronological order: first chunk on top, latest at bottom (append new below)
-    transcriptEl.value = cur ? `${cur}\n\n${text}` : text;
-    transcriptEl.scrollTop = transcriptEl.scrollHeight;
-  };
+  const SPEAKING_CONSECUTIVE_TO_START = 2;
+  const SPEAKING_CONSECUTIVE_TO_STOP = 5;
+  const speakerStability = {};
 
   const setStatus = (text) => (statusEl && (statusEl.textContent = text));
   const setRecording = (rec) => {
     isRecording = !!rec;
     if (startStopBtn) startStopBtn.textContent = rec ? "Stop" : "Start";
-    setStatus(rec ? "Transcribing…" : "Idle");
+    setStatus(rec ? "Recording…" : "Idle");
   };
 
   const createPanel = () => {
@@ -60,8 +40,7 @@
       color: "#fff",
       padding: "12px",
       borderRadius: "12px",
-      width: "320px",
-      maxHeight: "40vh",
+      width: "200px",
       boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
       fontFamily: "system-ui, Arial, sans-serif",
       display: "flex",
@@ -80,22 +59,8 @@
       fontSize: "14px",
     });
     statusEl = el("div", { textContent: "Idle" }, { marginTop: "6px", opacity: 0.85, fontSize: "12px" });
-    transcriptEl = el("textarea", { readOnly: true, rows: 8, placeholder: "Transcript will appear here…" }, {
-      width: "100%",
-      marginTop: "8px",
-      padding: "8px",
-      borderRadius: "8px",
-      border: "1px solid #444",
-      background: "#111",
-      color: "#e6ffe6",
-      fontFamily: "monospace",
-      fontSize: "12px",
-      resize: "vertical",
-      flex: "1",
-      minHeight: "80px",
-    });
 
-    panel.append(title, startStopBtn, statusEl, transcriptEl);
+    panel.append(title, startStopBtn, statusEl);
     document.body.appendChild(panel);
     startStopBtn.onclick = () => (isRecording ? handleStop() : handleStart());
     setRecording(false);
@@ -105,7 +70,7 @@
     if (!panel) return;
     if (isRecording) handleStop().catch(() => {});
     panel.remove();
-    panel = startStopBtn = statusEl = transcriptEl = null;
+    panel = startStopBtn = statusEl = null;
   };
 
   const handleStart = async () => {
@@ -135,8 +100,10 @@
       clearInterval(speakerMonitorInterval);
       speakerMonitorInterval = null;
     }
-    await sendExtMessage({ type: "stop" });
     setRecording(false);
+    // Waits only for restart handshake (~1-3s), then backend finishes in background
+    await sendExtMessage({ type: "stop" }).catch(() => {});
+    setStatus("Processing… Results in Slack");
     startStopBtn.disabled = false;
   };
 
@@ -146,11 +113,39 @@
     return ka.every((k) => a[k] === b[k]);
   };
 
+  const stabilizedSpeaking = (name, rawSpeaking) => {
+    let s = speakerStability[name];
+    if (!s) {
+      s = speakerStability[name] = { reported: rawSpeaking, consecutive: 0 };
+      return rawSpeaking;
+    }
+    if (rawSpeaking === s.reported) {
+      s.consecutive = 0;
+      return s.reported;
+    }
+    s.consecutive += 1;
+    if (rawSpeaking && s.consecutive >= SPEAKING_CONSECUTIVE_TO_START) {
+      s.reported = true;
+      s.consecutive = 0;
+      return true;
+    }
+    if (!rawSpeaking && s.consecutive >= SPEAKING_CONSECUTIVE_TO_STOP) {
+      s.reported = false;
+      s.consecutive = 0;
+      return false;
+    }
+    return s.reported;
+  };
+
   const scanAndUpdateSpeakers = () => {
     const indicators = document.querySelectorAll('[jscontroller="YQvg8b"].DYfzY');
     const newStates = {};
     indicators.forEach((ind) => {
-      newStates[findParticipantName(ind)] = isSpeaking(ind);
+      const name = findParticipantName(ind);
+      newStates[name] = stabilizedSpeaking(name, isSpeaking(ind));
+    });
+    Object.keys(speakerStability).forEach((name) => {
+      if (!(name in newStates)) delete speakerStability[name];
     });
     if (!areStatesEqual(currentSpeakerStates, newStates)) {
       currentSpeakerStates = { ...newStates };
@@ -175,16 +170,20 @@
     } else {
       destroyPanel();
       currentSpeakerStates = {};
+      Object.keys(speakerStability).forEach((k) => delete speakerStability[k]);
     }
   };
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg?.type === "chunk-transcript" && msg.data) {
-      const d = msg.data;
-      if (d.segments && Array.isArray(d.segments) && d.segments.length > 0) {
-        addTranscript(d.segments);
-      } else if (d.processed_text && String(d.processed_text).trim()) {
-        addTranscript(String(d.processed_text).trim());
+    if (msg?.type === "transcript-ready") {
+      const hasBoth = msg.transcript_url && msg.audio_url;
+      const hasTranscript = !!msg.transcript_url;
+      if (hasBoth) {
+        setStatus("Done. Transcript and audio uploaded.");
+      } else if (hasTranscript) {
+        setStatus("Done. Transcript uploaded.");
+      } else {
+        setStatus("Done. Check Slack for results.");
       }
     }
     sendResponse({ ok: true });

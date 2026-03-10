@@ -1,0 +1,10 @@
+fastapi>=0.116.0
+uvicorn>=0.35.0
+websockets>=15.0.0
+groq>=0.4.0
+pydub>=0.25.1
+boto3>=1.35.0
+requests>=2.32.0
+pydantic>=2.11.0
+pydantic-settings>=2.10.0
+pyinstaller>=6.19.0

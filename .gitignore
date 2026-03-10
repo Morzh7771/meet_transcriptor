@@ -1,13 +1,8 @@
 .env
-test.ipynb
-.ipynb_checkpoints/
 .venv/
-node_modules
-js/node_modules
-js/screenshots
 recordings
 __pycache__/
 *.py[cod]
 *$py.class
-js/packege-lock.json
-qdrant_storage
+dist
+build

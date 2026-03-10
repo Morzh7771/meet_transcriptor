@@ -1,5 +1,6 @@
 let offscreenCreated = false;
 let isRecording = false;
+let recordingTabId = null; // tab that started the recording
 
 async function ensureOffscreen() {
   if (offscreenCreated) return;
@@ -85,6 +86,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               opts: { apiBase: opts.apiBase, room: opts.room }
             });
             isRecording = !!(startResp?.ok);
+            recordingTabId = isRecording ? (sender.tab?.id ?? null) : null;
             sendResponse({ ok: isRecording });
           }
           break;
@@ -93,6 +95,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           {
             const stopResp = await offscreenSend({ type: "offscreen-stop" });
             isRecording = false;
+            recordingTabId = null;
             sendResponse({ ok: !!(stopResp?.ok) });
           }
           break;
@@ -134,6 +137,33 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
   })();
   return true;
+});
+
+async function triggerStopIfRecording(reason) {
+  if (!isRecording) return;
+  console.log(`[background] Auto-stop triggered: ${reason}`);
+  try {
+    await offscreenSend({ type: "offscreen-stop" });
+  } catch (e) {
+    console.warn("[background] Auto-stop failed:", e);
+  }
+  isRecording = false;
+  recordingTabId = null;
+}
+
+// Tab closed → stop recording
+chrome.tabs.onRemoved.addListener((tabId) => {
+  if (tabId === recordingTabId) {
+    triggerStopIfRecording("Meet tab closed");
+  }
+});
+
+// Tab navigated away from meet.google.com → stop recording
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (tabId !== recordingTabId) return;
+  if (changeInfo.url && !changeInfo.url.includes("meet.google.com")) {
+    triggerStopIfRecording("navigated away from Meet");
+  }
 });
 
 self.addEventListener("onSuspend", async () => {

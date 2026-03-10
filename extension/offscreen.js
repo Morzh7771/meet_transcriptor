@@ -29,6 +29,8 @@ const SPEAKER_UPDATE_INTERVAL = 100; // 100ms
 
 // Track restart state
 let isRestarting = false;
+let isStopping = false;
+let _stopRestartResolve = null;  // resolves when restart handshake completes
 let accumulatedChunkData = [];  // Store data chunks for current recording
 let isFirstStart = true;  // Track if this is the first start
 
@@ -168,7 +170,7 @@ const startSession = async () => {
     const meetCode = getRoomIdFromUrl(config.room) || config.room;
     const requestBody = {
       meet_code: meetCode,
-      meeting_language: config.meeting_language || "uk"
+      meeting_language: config.meeting_language || "auto"
     };
 
     const res = await fetch(`${config.apiBase}/start`, {
@@ -363,6 +365,11 @@ const handleRecorderRestart = async () => {
         console.error("[offscreen] Failed to send restart ack:", e);
       }
     }
+    // Signal stopCapture() that the handshake is done — it can clean up
+    if (_stopRestartResolve) {
+      _stopRestartResolve();
+      _stopRestartResolve = null;
+    }
     
   } catch (error) {
     console.error("[offscreen] Error during MediaRecorder restart:", error);
@@ -380,7 +387,11 @@ const handleRecorderRestart = async () => {
     } catch (e) {
       console.error("[offscreen] Failed to send error ack:", e);
     }
-    
+    // Signal stopCapture() even on error so it doesn't wait forever
+    if (_stopRestartResolve) {
+      _stopRestartResolve();
+      _stopRestartResolve = null;
+    }
     throw error;
   } finally {
     isRestarting = false;
@@ -418,10 +429,10 @@ const connectWebSocket = async () => {
     websocket.onclose = (event) => {
       console.log("[offscreen] WebSocket closed:", event.code, event.reason);
       stopWebSocketPing();
-      if (isRunning && event.code !== 1000) {
+      if (isRunning && !isStopping && event.code !== 1000) {
         console.log("[offscreen] Reconnecting WebSocket in 2s");
         setTimeout(() => {
-          if (isRunning) {
+          if (isRunning && !isStopping) {
             connectWebSocket().catch(e => console.error("[offscreen] WS reconnection failed:", e));
           }
         }, 2000);
@@ -463,6 +474,15 @@ const connectWebSocket = async () => {
                 transcribed: true,
                 timestamp: data.timestamp
               }
+            }).catch(() => {});
+          }
+
+          if (data.type === "transcript_ready") {
+            console.log("[offscreen] transcript_ready received:", data);
+            chrome.runtime.sendMessage({
+              type: "transcript-ready",
+              transcript_url: data.transcript_url,
+              audio_url: data.audio_url,
             }).catch(() => {});
           }
         }
@@ -677,7 +697,7 @@ const startCapture = async (opts = {}) => {
     room: opts.room || String(Date.now()),
     chunkMs: Math.max(1000, Math.min(120000, opts.chunkMs || config.chunkMs)),
     desktop: !!opts.desktop,
-    meeting_language: opts.meeting_language || "uk"
+    meeting_language: opts.meeting_language || "auto"
   });
 
   isRunning = true;
@@ -761,19 +781,46 @@ const startCapture = async (opts = {}) => {
 };
 
 const stopCapture = async () => {
-  console.log("[offscreen] Stopping capture - closing WebSocket connection");
+  console.log("[offscreen] stopCapture: initiating");
+  isStopping = true;
+
+  // Keep isRunning=true so handleRecorderRestart() works when backend sends restart_recorder
+  stopSpeakerStateUpdates();
+
+  if (websocket && websocket.readyState === WebSocket.OPEN) {
+    // Create promise that resolves once restart handshake completes
+    const handshakeDone = new Promise(resolve => {
+      _stopRestartResolve = resolve;
+    });
+
+    try {
+      websocket.send(JSON.stringify({ type: "end", room: config.room, timestamp: Date.now() }));
+      console.log("[offscreen] Sent 'end' to backend, waiting for restart handshake");
+    } catch (e) {
+      console.warn("[offscreen] Failed to send 'end':", e);
+      if (_stopRestartResolve) { _stopRestartResolve(); _stopRestartResolve = null; }
+    }
+
+    // Wait only for restart_recorder handshake (~1-3s), NOT for full transcription/upload
+    // Backend continues transcription + S3 + Slack in background after this point
+    await Promise.race([
+      handshakeDone,
+      new Promise(r => setTimeout(r, 10000)), // 10s max
+    ]);
+    console.log("[offscreen] Restart handshake done, cleaning up (backend processing continues in background)");
+  }
+
+  // Clean up immediately — backend finishes transcription/S3/Slack on its own
   isRunning = false;
   isRestarting = false;
+  isStopping = false;
+  _stopRestartResolve = null;
 
-  stopSpeakerStateUpdates();
   stopWebSocketPing();
   stopChatWebSocketPing();
 
   if (mediaRecorder && mediaRecorder.state !== "inactive") {
-    try { 
-      mediaRecorder.stop(); 
-      console.log("[offscreen] MediaRecorder stopped");
-    } catch {}
+    try { mediaRecorder.stop(); } catch {}
   }
   mediaRecorder = null;
 
@@ -782,33 +829,12 @@ const stopCapture = async () => {
     mixedStream = null;
   }
 
-  // Simply close WebSocket - backend handles everything itself
   if (websocket) {
-    if (websocket.readyState === WebSocket.OPEN) {
-      try {
-        console.log("[offscreen] Sending end message and closing WebSocket");
-        websocket.send(JSON.stringify({ type: "end", room: config.room, timestamp: Date.now() }));
-        await new Promise(r => setTimeout(r, 100)); // Give time to send
-      } catch {}
-    }
-    try { 
-      websocket.close(); 
-      console.log("[offscreen] WebSocket closed");
-    } catch {}
+    try { websocket.close(); } catch {}
     websocket = null;
   }
-
   if (chatWebsocket) {
-    if (chatWebsocket.readyState === WebSocket.OPEN) {
-      try {
-        console.log("[offscreen] Closing Chat WebSocket");
-        await new Promise(r => setTimeout(r, 100));
-      } catch {}
-    }
-    try { 
-      chatWebsocket.close(); 
-      console.log("[offscreen] Chat WebSocket closed");
-    } catch {}
+    try { chatWebsocket.close(); } catch {}
     chatWebsocket = null;
   }
 
@@ -819,7 +845,7 @@ const stopCapture = async () => {
   websocketPort = null;
   chatWebsocketPort = null;
 
-  console.log("[offscreen] Stopped WebM audio streaming");
+  console.log("[offscreen] Capture stopped, backend processing in background");
 };
 
 const setMicEnabled = (enabled) => {

@@ -12,7 +12,7 @@ function findParticipantName(audioIndicator) {
     const nameSpan = current.querySelector("span.notranslate");
     if (nameSpan?.textContent?.trim()) {
       const name = nameSpan.textContent.trim();
-      if (name && !name.includes("Закрепить") && !name.includes("Ещё")) return name;
+      if (name && !name.includes("Pin") && !name.includes("More")) return name;
     }
   }
   return `User_${Date.now() % 10000}`;

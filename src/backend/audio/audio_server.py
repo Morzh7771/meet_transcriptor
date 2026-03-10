@@ -1,5 +1,7 @@
 import os
 import json
+import shutil
+import tempfile
 import time
 import asyncio
 import websockets
@@ -8,6 +10,12 @@ from src.backend.audio.chunk_handler import ChunkHandler
 from src.backend.audio.transcript_manager import TranscriptManager
 from src.backend.audio.speaker_tracker import SpeakerTracker
 from src.backend.utils.logger import CustomLog
+from src.backend.services.s3_storage import S3Storage
+from src.backend.services.slack_notifier import SlackNotifier
+
+
+def is_app_mode() -> bool:
+    return os.environ.get("APP_MODE") == "1"
 
 
 class AudioServer:
@@ -18,23 +26,26 @@ class AudioServer:
         self.connection_closed = asyncio.Event()
         self.websocket = None
         self.logger = CustomLog()
-        self.CHUNK_INTERVAL = 30
+        self.CHUNK_INTERVAL = int(os.environ.get("AUDIO_CHUNK_INTERVAL_SEC", "30"))
+        self.RESTART_ACK_TIMEOUT = 10
         self._restart_ack_received = False
         self.recording_started = False
         self.violations_ws = None
         self.servers_ready = asyncio.Event()
+        self._session_id = None
+        self._meet_code = None
+        self._s3 = S3Storage()
+        self._slack = SlackNotifier()
+        self._temp_dir = None
 
     async def handler_whisper(self, ws, meet_code, meeting_language):
         self.logger.info("Whisper WebSocket connected")
         self.websocket = ws
-        self.recording_started = True  # Accept audio immediately, no initial discard
-        self.chunk_handler.chunk_valid = True  # So first 30s is finalized on first restart_ready
+        self.recording_started = True
+        self.chunk_handler.chunk_valid = True
 
         ping_task = asyncio.create_task(self.send_ping(ws))
-        chunk_processor_task = asyncio.create_task(self.chunk_processor(meeting_language))
-        
-        self.logger.info("Started ping and chunk processor tasks")
-         
+
         try:
             async for message in ws:
                 if isinstance(message, bytes):
@@ -46,88 +57,16 @@ class AudioServer:
         except Exception as e:
             self.logger.error(f"Error in WebSocket handler: {e}")
         finally:
-            self.logger.info("Cancelling ping and chunk processor tasks")
+            self.logger.info("Cancelling ping task")
             ping_task.cancel()
-            chunk_processor_task.cancel()
             with suppress(asyncio.CancelledError):
                 await ping_task
-                await chunk_processor_task
-            self.logger.info("[FINALLY] Calling connection_closed.set()")
             self.connection_closed.set()
-            self.logger.info("Connection_closed.set() closed")
 
-    async def chunk_processor(self, meeting_language):
-        """Periodically processes accumulated audio data with MediaRecorder restart.
-        recording_started is set on client 'init', so we accept audio immediately."""
-        self.logger.info(f"Chunk processor started, will process chunks every {self.CHUNK_INTERVAL} seconds")
-        try:
-            while not self.connection_closed.is_set():
-                # Wait for interval
-                await asyncio.sleep(self.CHUNK_INTERVAL)
-                
-                if self.connection_closed.is_set():
-                    break
-                
-                if not self.recording_started:
-                    self.logger.warning("Recording not properly started yet, skipping this cycle")
-                    continue
-                    
-                try:
-                    # Send restart command to frontend before processing chunk
-                    restart_success = False
-                    if self.websocket:
-                        restart_command = json.dumps({
-                            "type": "restart_recorder",
-                            "timestamp": time.time() * 1000
-                        })
-                        try:
-                            await self.websocket.send(restart_command)
-                            self.logger.info("Sent restart command to frontend")
-                            
-                            # Wait for restart acknowledgment from frontend
-                            restart_success = await self._wait_for_restart_ack()
-                            if not restart_success:
-                                self.logger.warning("Frontend restart acknowledgment timeout")
-                        except Exception as e:
-                            self.logger.error(f"Failed to send restart command: {e}")
-                    
-                    # Only process if restart was successful
-                    if restart_success and self.chunk_handler.has_valid_data():
-                        # Wait a bit more to ensure all final data arrives
-                        await asyncio.sleep(0.5)
-                        
-                        webm_path, timestamp, chunk_start_time = self.chunk_handler.finalize_chunk()
-                        if webm_path:
-                            self.logger.info(f"Processing chunk started at: {chunk_start_time}")
-                            # First save speakers, then start transcription
-                            self.speaker_tracker.save_buffer(timestamp)
-                            # Run processing asynchronously
-                            asyncio.create_task(
-                                self.transcript_manager.transcribe_chunk(
-                                    webm_path, timestamp, chunk_start_time, meeting_language,
-                                )
-                            )
-                    elif not restart_success:
-                        self.logger.warning("Skipping chunk processing due to failed restart")
-                        # Discard potentially corrupted data
-                        self.chunk_handler.discard_current_buffer()
-                    else:
-                        self.logger.info("No valid audio data to process in this cycle")
-                        
-                except Exception as e:
-                    self.logger.error(f"Error in chunk processing cycle: {e}")
-                    await asyncio.sleep(1)
-                    
-        except asyncio.CancelledError:
-            self.logger.info("Chunk processor cancelled")
-            raise
-        except Exception as e:
-            self.logger.error(f"Fatal error in chunk processor: {e}")
-        finally:
-            self.logger.info("Chunk processor stopped")
-
-    async def _wait_for_restart_ack(self, timeout=5.0):
-        """Wait for restart acknowledgment from frontend"""
+    async def _wait_for_restart_ack(self, timeout=None):
+        """Wait for restart acknowledgment from frontend. Timeout must exceed frontend silence wait (5s) + stop time (~3s)."""
+        if timeout is None:
+            timeout = getattr(self, "RESTART_ACK_TIMEOUT", 10)
         try:
             self._restart_ack_received = False
             start_time = time.time()
@@ -147,11 +86,9 @@ class AudioServer:
             return False
 
     async def _handle_audio_data(self, data, ws, meeting_language):
-        """Accumulate audio data only if recording has started properly"""
         if self.recording_started:
             self.chunk_handler.add_data(data)
         else:
-            # Discard data until we have a clean start
             self.logger.info("Discarding audio data - recording not started properly yet")
 
     async def _handle_json_message(self, message):
@@ -168,6 +105,10 @@ class AudioServer:
                 self._restart_ack_received = True
                 self.logger.info("Received restart acknowledgment from frontend")
                 self.chunk_handler.mark_new_chunk_start()
+            elif data.get("type") == "end":
+                self.logger.info("Received 'end' from client, scheduling terminate")
+                self._finalized_by_terminate = True  # prevent _finalize_session racing
+                asyncio.create_task(self.terminate())
         except Exception as e:
             self.logger.error(f"Error handling message: {e}")
 
@@ -185,7 +126,10 @@ class AudioServer:
                 payload["segments"] = segments
             await self.websocket.send(json.dumps(payload))
         except Exception as e:
-            self.logger.error(f"Failed to send transcript: {e}")
+            if "1005" in str(e) or "no status received" in str(e).lower():
+                self.logger.info("Transcript not sent: client already disconnected")
+            else:
+                self.logger.error(f"Failed to send transcript: {e}")
 
     async def handle_chat_ws(self, ws, meet_code):
         self.logger.info("Chat WS connected")
@@ -200,7 +144,6 @@ class AudioServer:
             ping_task.cancel()
             with suppress(asyncio.CancelledError):
                 await ping_task
-            self.connection_closed.set()
 
     async def handle_violations_ws(self, ws, meet_code):
         """
@@ -230,7 +173,6 @@ class AudioServer:
             with suppress(asyncio.CancelledError):
                 await ping_task
             self.logger.info("Violations WebSocket handler finished")
-            self.connection_closed.set()
 
     async def send_violation_alert(self, violation_data: dict):
         """Send violation alert to frontend through WebSocket."""
@@ -251,10 +193,23 @@ class AudioServer:
 
     async def start(self, meet_code, meeting_language, ws_port, violations_port):
         session_id = f"{meet_code}_{time.strftime('%Y-%m-%d_%H-%M-%S')}"
+        self._session_id = session_id
+        self._meet_code = meet_code
+        raw = (meeting_language or "").strip().lower()
+        self._meeting_language = "auto" if (not raw or raw == "auto") else meeting_language.strip()
+
+        if is_app_mode():
+            self._temp_dir = tempfile.mkdtemp(prefix="meet_transcript_")
+            base = self._temp_dir
+            self.logger.info(f"App mode: using temp dir {base}")
+        else:
+            base = "recordings"
+            self._temp_dir = None
+
         paths = {
-            "audio": os.path.join("recordings", "audio", session_id),
-            "transcripts": os.path.join("recordings", "transcripts", session_id),
-            "full": os.path.join("recordings", "full", session_id),
+            "audio": os.path.join(base, "audio", session_id),
+            "transcripts": os.path.join(base, "transcripts", session_id),
+            "full": os.path.join(base, "full", session_id),
         }
 
         for path in paths.values():
@@ -268,6 +223,7 @@ class AudioServer:
 
         self.recording_started = False
         self.transcript_manager.reset_transcript_buffer()
+        self._finalized_by_terminate = False
 
         self.logger.info(f"Starting audio WebSocket server on port {ws_port}")
         server = await websockets.serve(
@@ -282,14 +238,14 @@ class AudioServer:
             violations_port
         )
         
-        # Signal that servers are ready and listening
         self.servers_ready.set()
-        self.logger.info(f"✅ WebSocket servers are ready on ports {ws_port} and {violations_port}")
+        self.logger.info(f"WebSocket servers ready on ports {ws_port} and {violations_port}")
         
         try:
             await self.connection_closed.wait()
             self.logger.info("Session finished")
-            await self._finalize_session(meeting_language)
+            if not getattr(self, "_finalized_by_terminate", False):
+                await self._finalize_session(meeting_language)
         finally:
             server.close()
             await server.wait_closed()
@@ -298,65 +254,190 @@ class AudioServer:
             self.logger.info("WebSocket servers closed")
 
     async def _finalize_session(self, meeting_language):
+        webm_path = None
         if self.recording_started:
             if self.chunk_handler.has_valid_data():
                 webm_path, timestamp, chunk_start_time = self.chunk_handler.finalize_chunk()
                 if webm_path:
+                    self.speaker_tracker.save_buffer(timestamp)
                     await self.transcript_manager.transcribe_chunk(
                         webm_path, timestamp, chunk_start_time, meeting_language,
                     )
-                    self.speaker_tracker.save_buffer(timestamp)
             elif self.chunk_handler.has_data():
-                # Save last chunk (current buffer) that wasn't closed by restart
                 webm_path, timestamp, chunk_start_time = self.chunk_handler.finalize()
                 if webm_path:
+                    self.speaker_tracker.save_buffer(timestamp)
                     await self.transcript_manager.transcribe_chunk(
                         webm_path, timestamp, chunk_start_time, meeting_language,
                     )
-                    self.speaker_tracker.save_buffer(timestamp)
-        # Allow in-flight transcript tasks to finish, then save full transcript to recordings/full/
-        await asyncio.sleep(5)
-        self.transcript_manager.save_full()
+        await asyncio.sleep(2)
+        full_content = self.transcript_manager.save_full(skip_file=is_app_mode())
         self.logger.info("Session finalized")
+        if (full_content or webm_path) and self._session_id and self._meet_code:
+            await self._run_finalize_integrations(full_content, webm_path)
+        self._cleanup_temp()
+
+    def _parse_session_datetime(self):
+        """From _session_id (meet_code_YYYY-MM-DD_HH-MM-SS) return (date_str, time_str)."""
+        if not self._session_id:
+            return "-", "-"
+        parts = self._session_id.split("_")
+        if len(parts) >= 3:
+            date_str = parts[-2]
+            time_str = parts[-1].replace("-", ":", 2)
+            return date_str, time_str
+        return "-", "-"
+
+    async def _run_finalize_integrations(
+        self, full_content: str | None, webm_path: str | None = None
+    ) -> tuple[str | None, str | None]:
+        """Upload transcript and audio to S3, print summary, notify Slack. Returns (transcript_url, audio_url)."""
+        date_str, time_str = self._parse_session_datetime()
+        participants = self.speaker_tracker.get_unique_speakers()
+        participants_str = ", ".join(participants) if participants else "-"
+
+        transcript_url = None
+        audio_url = None
+        if self._s3.is_configured():
+            self.logger.info("S3 configured, uploading...")
+            if full_content:
+                transcript_url = await asyncio.to_thread(
+                    self._s3.upload_transcript,
+                    full_content,
+                    date_str,
+                    self._meet_code,
+                    time_str,
+                )
+                self.logger.info(f"Transcript upload result: {transcript_url}")
+            else:
+                self.logger.warning("No transcript content to upload")
+            if webm_path:
+                audio_url = await asyncio.to_thread(
+                    self._s3.upload_audio,
+                    webm_path,
+                    date_str,
+                    self._meet_code,
+                    time_str,
+                )
+                self.logger.info(f"Audio upload result: {audio_url}")
+            else:
+                self.logger.warning("No audio path to upload")
+        else:
+            self.logger.warning("S3 not configured, skipping upload")
+
+        self.logger.info(
+            f"Session summary: date={date_str} time={time_str} room={self._meet_code} "
+            f"participants={participants_str} transcript={transcript_url or '-'} audio={audio_url or '-'}"
+        )
+
+        if self._slack.is_configured():
+            await asyncio.to_thread(
+                self._slack.notify_transcript_ready,
+                date_str,
+                time_str,
+                self._meet_code,
+                participants,
+                transcript_url,
+                audio_url,
+            )
+        return transcript_url, audio_url
 
     async def terminate(self):
-        self.logger.info("Terminating session manually")
+        """Request full recording (restart_recorder → restart_ready), save one file, transcribe, upload to S3, close."""
+        meeting_language = getattr(self, "_meeting_language", "auto")
+        self.logger.info("Terminating session: request full recording then close")
+        webm_path = None
+
+        if self.websocket and self.recording_started:
+            try:
+                restart_command = json.dumps({"type": "restart_recorder", "timestamp": time.time() * 1000})
+                await self.websocket.send(restart_command)
+                self.logger.info("Sent restart_recorder to get last chunk")
+                restart_ok = await self._wait_for_restart_ack(timeout=self.RESTART_ACK_TIMEOUT)
+                if restart_ok and self.chunk_handler.has_valid_data():
+                    await asyncio.sleep(0.5)
+                    wp, timestamp, chunk_start_time = self.chunk_handler.finalize_chunk()
+                    if wp:
+                        webm_path = wp
+                        self.speaker_tracker.save_buffer(timestamp)
+                        await self.transcript_manager.transcribe_chunk(
+                            wp, timestamp, chunk_start_time, meeting_language,
+                        )
+                        self.logger.info("Last chunk processed")
+                elif self.chunk_handler.has_data():
+                    wp, timestamp, chunk_start_time = self.chunk_handler.finalize()
+                    if wp:
+                        webm_path = wp
+                        self.speaker_tracker.save_buffer(timestamp)
+                        await self.transcript_manager.transcribe_chunk(
+                            wp, timestamp, chunk_start_time, meeting_language,
+                        )
+                        self.logger.info("Last chunk (finalize) processed")
+            except Exception as e:
+                self.logger.warning(f"Last chunk on terminate failed: {e}")
+
+        await asyncio.sleep(0.5)
+        full_content = self.transcript_manager.save_full(skip_file=is_app_mode())
+        if full_content:
+            self.logger.info(f"Built full transcript (terminate), length={len(full_content)}")
+        else:
+            buf_len = len(self.transcript_manager.full_transcript_buffer)
+            self.logger.warning(f"No transcript content after save_full, buffer_entries={buf_len}")
+        transcript_url, audio_url = None, None
+        if (full_content or webm_path) and self._session_id and self._meet_code:
+            transcript_url, audio_url = await self._run_finalize_integrations(
+                full_content, webm_path
+            )
+        self._finalized_by_terminate = True
 
         if self.websocket:
             try:
-                await self.websocket.send("terminate")
+                await self.websocket.send(
+                    json.dumps({
+                        "type": "transcript_ready",
+                        "transcript_url": transcript_url,
+                        "audio_url": audio_url,
+                    })
+                )
+                self.logger.info(f"Sent transcript_ready: transcript={transcript_url} audio={audio_url}")
+            except Exception as e:
+                self.logger.warning(f"Could not send transcript_ready: {e}")
+            try:
+                await self.websocket.send(json.dumps({"type": "terminate"}))
                 self.logger.info("Sent terminate message to websocket")
             except Exception as e:
                 self.logger.warning(f"Could not send terminate: {e}")
-
             try:
                 await self.websocket.close()
                 self.logger.info("WebSocket closed")
             except Exception as e:
                 self.logger.warning(f"Could not close websocket: {e}")
-        
+
         if self.violations_ws:
             try:
                 await self.violations_ws.send(json.dumps({"type": "terminate"}))
-                self.logger.info("Sent terminate to violations websocket")
-            except Exception as e:
-                self.logger.warning(f"Could not send terminate to violations websocket: {e}")
-
-            try:
                 await self.violations_ws.close()
-                self.logger.info("Violations websocket closed")
             except Exception as e:
                 self.logger.warning(f"Could not close violations websocket: {e}")
 
         self.connection_closed.set()
-        
+        self._cleanup_temp()
+
+    def _cleanup_temp(self):
+        if self._temp_dir and os.path.isdir(self._temp_dir):
+            try:
+                shutil.rmtree(self._temp_dir, ignore_errors=True)
+                self.logger.info(f"Cleaned up temp dir: {self._temp_dir}")
+            except Exception as e:
+                self.logger.warning(f"Temp cleanup failed: {e}")
+            self._temp_dir = None
+
     async def send_ping(self, websocket):
-        while not self.connection_closed.is_set() and not websocket.close:
+        while not self.connection_closed.is_set():
             try:
                 await websocket.ping()
                 await asyncio.sleep(60)
-            except websockets.exceptions.ConnectionClosed:
-                print("Connection closed")
+            except Exception:
                 break
     
     async def wait_until_ready(self, timeout=15):
