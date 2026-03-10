@@ -50,7 +50,7 @@ def find_dotenv():
     """Find .env file in known locations, return (dict, path) or ({}, None)."""
     search_dirs = []
     seen = set()
-    for d in [_LAUNCHER_DIR, _DATA_DIR, _APP_DIR]:
+    for d in [_MEIPASS, _LAUNCHER_DIR, _DATA_DIR, _APP_DIR]:
         real = os.path.realpath(d)
         if real not in seen:
             seen.add(real)
