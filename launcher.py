@@ -34,7 +34,7 @@ def load_dotenv(dirpath):
     if not os.path.isfile(env_path):
         return {}
     result = {}
-    with open(env_path, "r", encoding="utf-8") as f:
+    with open(env_path, "r", encoding="utf-8-sig") as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith("#"):

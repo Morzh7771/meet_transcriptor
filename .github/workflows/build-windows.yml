@@ -44,8 +44,9 @@ jobs:
           ENV_CONTENT: ${{ vars.APP_ENV }}
         run: |
           if ($env:ENV_CONTENT) {
-            $env:ENV_CONTENT | Out-File -FilePath ".env" -Encoding utf8 -NoNewline
-            echo ".env created from variable"
+            $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+            [System.IO.File]::WriteAllText((Resolve-Path ".").Path + "\.env", $env:ENV_CONTENT, $utf8NoBom)
+            echo ".env created from variable (UTF-8 no BOM)"
           } else {
             echo "WARNING: APP_ENV variable not set, .env will be empty"
             New-Item -ItemType File -Path ".env" -Force | Out-Null
