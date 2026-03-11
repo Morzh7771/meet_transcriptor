@@ -12,6 +12,7 @@ env:
 jobs:
   build:
     runs-on: windows-latest
+    environment: APP_ENV
 
     steps:
       - name: Checkout
@@ -40,13 +41,13 @@ jobs:
       - name: Create .env
         shell: powershell
         env:
-          ENV_CONTENT: ${{ secrets.APP_ENV }}
+          ENV_CONTENT: ${{ vars.APP_ENV }}
         run: |
           if ($env:ENV_CONTENT) {
             $env:ENV_CONTENT | Out-File -FilePath ".env" -Encoding utf8 -NoNewline
-            echo ".env created from secret"
+            echo ".env created from variable"
           } else {
-            echo "WARNING: APP_ENV secret not set, .env will be empty"
+            echo "WARNING: APP_ENV variable not set, .env will be empty"
             New-Item -ItemType File -Path ".env" -Force | Out-Null
           }
 
