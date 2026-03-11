@@ -6,13 +6,8 @@ if getattr(sys, "frozen", False):
     sys.path.insert(0, sys._MEIPASS)
 
 import uvicorn
+from src.backend.api.fast_api import app  # noqa: E402
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8234"))
-    host = "127.0.0.1"
-    uvicorn.run(
-        "src.backend.api.fast_api:app",
-        host=host,
-        port=port,
-        reload=False,
-    )
+    uvicorn.run(app, host="127.0.0.1", port=port)

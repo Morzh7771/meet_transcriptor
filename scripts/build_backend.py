@@ -41,6 +41,7 @@ def main():
         "--onefile",
         "--name", "meet-transcript-backend",
         f"--add-data={add_data}",
+        f"--paths={PROJECT_ROOT}",
         "--clean",
         "--noconfirm",
         "--workpath", str(work_dir),
