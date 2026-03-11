@@ -6,6 +6,9 @@ on:
     tags:
       - "v*"               # или автоматически при push тега v1.0.0
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: windows-latest
