@@ -6,12 +6,12 @@ import time
 import asyncio
 import websockets
 from contextlib import suppress
-from src.backend.audio.chunk_handler import ChunkHandler
-from src.backend.audio.transcript_manager import TranscriptManager
-from src.backend.audio.speaker_tracker import SpeakerTracker
-from src.backend.utils.logger import CustomLog
-from src.backend.services.s3_storage import S3Storage
-from src.backend.services.slack_notifier import SlackNotifier
+from backend.audio.chunk_handler import ChunkHandler
+from backend.audio.transcript_manager import TranscriptManager
+from backend.audio.speaker_tracker import SpeakerTracker
+from backend.utils.logger import CustomLog
+from backend.services.s3_storage import S3Storage
+from backend.services.slack_notifier import SlackNotifier
 
 
 def is_app_mode() -> bool:

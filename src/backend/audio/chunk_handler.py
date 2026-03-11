@@ -1,6 +1,6 @@
 import os
 import time
-from src.backend.utils.logger import CustomLog
+from backend.utils.logger import CustomLog
 
 class ChunkHandler:
     def __init__(self, chunk_duration=10):

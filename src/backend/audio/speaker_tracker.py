@@ -1,6 +1,6 @@
 import os
 import json
-from src.backend.utils.logger import CustomLog
+from backend.utils.logger import CustomLog
 
 class SpeakerTracker():
     def __init__(self):

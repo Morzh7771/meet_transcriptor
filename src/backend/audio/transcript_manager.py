@@ -2,9 +2,9 @@
 import os
 import json
 import time
-from src.backend.modules.transcriber import Transcriber
-from src.backend.core.base_facade import BaseFacade
-from src.backend.audio.speaker_resolver import SpeakerResolver
+from backend.modules.transcriber import Transcriber
+from backend.core.base_facade import BaseFacade
+from backend.audio.speaker_resolver import SpeakerResolver
 
 
 class TranscriptManager(BaseFacade):

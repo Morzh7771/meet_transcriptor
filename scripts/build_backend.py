@@ -30,6 +30,7 @@ def main():
     work_dir = PROJECT_ROOT / "build" / "pyinstaller"
     dist_dir = PROJECT_ROOT / "dist"
     dist_dir.mkdir(exist_ok=True)
+    src_dir = PROJECT_ROOT / "src"
 
     cmd = [
         sys.executable,
@@ -37,7 +38,7 @@ def main():
         str(PROJECT_ROOT / "main.py"),
         "--onefile",
         "--name", "meet-transcript-backend",
-        f"--paths={PROJECT_ROOT}",
+        f"--paths={src_dir}",
         "--clean",
         "--noconfirm",
         "--workpath", str(work_dir),
@@ -58,7 +59,7 @@ def main():
         "--hidden-import=s3transfer",
         "--collect-data=botocore",
         "--hidden-import=requests",
-        "--collect-all", "src",
+        "--collect-all", "backend",
     ]
 
     # Bundle ffmpeg and ffprobe so pydub works without system install

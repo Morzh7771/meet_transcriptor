@@ -17,6 +17,8 @@
   let speakerMonitorInterval = null;
   let inMeeting = false;
   let lastMuted = null;
+  let outOfMeetingTimer = null;
+  const OUT_OF_MEETING_GRACE_MS = 15000;
   let currentSpeakerStates = {};
   const SPEAKING_CONSECUTIVE_TO_START = 2;
   const SPEAKING_CONSECUTIVE_TO_STOP = 5;
@@ -185,18 +187,40 @@
     sendExtMessage({ type: "meet-mic-state", muted });
   };
 
-  const isInMeeting = () => !!document.querySelector('[jsname="BOHaEe"], [data-participant-id]');
+  // button[data-is-muted] (mic button) is always present in an active call,
+  // including during screen share / presentation mode — unlike participant tiles
+  // which can briefly disappear during Meet UI transitions.
+  const isInMeeting = () => !!document.querySelector(
+    '[jsname="BOHaEe"], [data-participant-id], button[data-is-muted]'
+  );
+
   const checkMeetingState = () => {
     const cur = isInMeeting();
-    if (cur === inMeeting) return;
-    inMeeting = cur;
-    if (inMeeting) {
-      createPanel();
-      reportMicState(getMicMuted(findMicButton()));
-    } else {
-      destroyPanel();
-      currentSpeakerStates = {};
-      Object.keys(speakerStability).forEach((k) => delete speakerStability[k]);
+    if (cur) {
+      // Back in meeting: cancel any pending leave timer
+      if (outOfMeetingTimer) {
+        clearTimeout(outOfMeetingTimer);
+        outOfMeetingTimer = null;
+      }
+      if (!inMeeting) {
+        inMeeting = true;
+        createPanel();
+        reportMicState(getMicMuted(findMicButton()));
+      }
+    } else if (inMeeting && !outOfMeetingTimer) {
+      // Not detected in meeting — start grace-period timer before stopping.
+      // This prevents false stops during DOM transitions (e.g. starting a
+      // Google Meet screen share / presentation), where participant elements
+      // temporarily disappear for a second or two.
+      outOfMeetingTimer = setTimeout(() => {
+        outOfMeetingTimer = null;
+        if (!isInMeeting()) {
+          inMeeting = false;
+          destroyPanel();
+          currentSpeakerStates = {};
+          Object.keys(speakerStability).forEach((k) => delete speakerStability[k]);
+        }
+      }, OUT_OF_MEETING_GRACE_MS);
     }
   };
 

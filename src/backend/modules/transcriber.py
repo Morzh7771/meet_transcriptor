@@ -1,6 +1,6 @@
 import asyncio
-from src.backend.core.base_facade import BaseFacade
-from src.backend.utils.audio_preprocess import preprocess_audio_for_whisper
+from backend.core.base_facade import BaseFacade
+from backend.utils.audio_preprocess import preprocess_audio_for_whisper
 
 
 class Transcriber(BaseFacade):

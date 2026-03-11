@@ -1,8 +1,8 @@
 """Upload transcript and audio to S3: ai/meets/{date}_{room}_{dmy}_{time}/."""
 from typing import Optional
 
-from src.backend.utils.configs import Config
-from src.backend.utils.logger import CustomLog
+from backend.utils.configs import Config
+from backend.utils.logger import CustomLog
 
 
 def _unique_name(date_ymd: str, meet_code: str, time_hms: str) -> str:

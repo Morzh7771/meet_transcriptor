@@ -7,9 +7,9 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from src.backend.models.api_models import StartMeetingRequest
-from src.backend.core.facade import Facade
-from src.backend.services.session_manager import SessionManager
+from backend.models.api_models import StartMeetingRequest
+from backend.core.facade import Facade
+from backend.services.session_manager import SessionManager
 
 facade = Facade()
 session_manager = SessionManager()

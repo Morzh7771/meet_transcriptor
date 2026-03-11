@@ -1,7 +1,7 @@
 """Base facade: config, logger, Groq client (singleton). Transcription via Groq Whisper only."""
 from groq import AsyncGroq
-from src.backend.utils.configs import Config
-from src.backend.utils.logger import CustomLog
+from backend.utils.configs import Config
+from backend.utils.logger import CustomLog
 
 
 class BaseFacade:

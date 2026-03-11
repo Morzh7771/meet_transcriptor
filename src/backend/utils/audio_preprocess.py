@@ -5,7 +5,7 @@ import sys
 from io import BytesIO
 from typing import Tuple
 
-from src.backend.utils.logger import CustomLog
+from backend.utils.logger import CustomLog
 
 WHISPER_SAMPLE_RATE = 16000
 

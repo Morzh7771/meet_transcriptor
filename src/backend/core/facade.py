@@ -1,8 +1,8 @@
 """Facade for Meet transcript flow: start/stop session, audio server, free port."""
 import asyncio
-from src.backend.audio.audio_server import AudioServer
-from src.backend.core.base_facade import BaseFacade
-from src.backend.utils.port_finder import find_free_port
+from backend.audio.audio_server import AudioServer
+from backend.core.base_facade import BaseFacade
+from backend.utils.port_finder import find_free_port
 
 
 class Facade(BaseFacade):

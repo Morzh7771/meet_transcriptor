@@ -3,8 +3,8 @@ from typing import List, Optional
 
 import requests
 
-from src.backend.utils.configs import Config
-from src.backend.utils.logger import CustomLog
+from backend.utils.configs import Config
+from backend.utils.logger import CustomLog
 
 SLACK_API = "https://slack.com/api"
 
@@ -28,9 +28,12 @@ class SlackNotifier:
         transcript_url: Optional[str],
         audio_url: Optional[str],
     ) -> str:
-        participants_str = ", ".join(participants) if participants else "-"
         transcript_link = f"<{transcript_url}|Transcript>" if transcript_url else "-"
         audio_link = f"<{audio_url}|Audio>" if audio_url else "-"
+        only_self = len(participants) <= 1
+        if only_self:
+            return f"*Transcript:* {transcript_link} / {audio_link}"
+        participants_str = ", ".join(participants)
         return (
             f"*Date:* {date}\n"
             f"*Time:* {time_str}\n"
