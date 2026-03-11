@@ -13,12 +13,25 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def find_binary(name: str) -> Path | None:
-    """Find a binary by name, checking PATH and common macOS Homebrew locations."""
-    found = shutil.which(name)
+    """Find a binary by name, checking PATH and common platform-specific locations."""
+    exe = name + (".exe" if platform.system() == "Windows" else "")
+    found = shutil.which(exe) or shutil.which(name)
     if found:
         return Path(found)
-    for prefix in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"]:
-        p = Path(prefix) / name
+    if platform.system() == "Windows":
+        candidates = [
+            Path(r"C:\ffmpeg\bin") / exe,
+            Path(r"C:\Program Files\ffmpeg\bin") / exe,
+            Path(r"C:\ProgramData\chocolatey\bin") / exe,
+            Path.home() / "ffmpeg" / "bin" / exe,
+        ]
+    else:
+        candidates = [
+            Path("/opt/homebrew/bin") / name,
+            Path("/usr/local/bin") / name,
+            Path("/usr/bin") / name,
+        ]
+    for p in candidates:
         if p.exists():
             return p
     return None
@@ -70,7 +83,12 @@ def main():
             print(f"Bundling {binary}: {path}")
         else:
             print(f"WARNING: {binary} not found — audio preprocessing will fail in the built app.")
-            print(f"  Install via: brew install ffmpeg")
+            if is_win:
+                print(f"  Windows: download from https://github.com/BtbN/FFmpeg-Builds/releases")
+                print(f"  Extract and place ffmpeg.exe + ffprobe.exe in C:\\ffmpeg\\bin\\")
+                print(f"  Or install via: winget install ffmpeg   /   choco install ffmpeg")
+            else:
+                print(f"  macOS: brew install ffmpeg")
 
     print("Running PyInstaller for backend...")
     r = subprocess.run(cmd, cwd=str(PROJECT_ROOT))

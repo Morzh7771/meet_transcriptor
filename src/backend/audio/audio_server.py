@@ -35,6 +35,7 @@ class AudioServer:
         self._session_id = None
         self._meet_code = None
         self._slack_dm_email = None
+        self._start_time: float | None = None
         self._s3 = S3Storage()
         self._slack = SlackNotifier()
         self._temp_dir = None
@@ -193,6 +194,7 @@ class AudioServer:
             self.logger.error(f"Failed to send violation alert: {e}")
 
     async def start(self, meet_code, meeting_language, ws_port, violations_port, slack_dm_email=None):
+        self._start_time = time.time()
         session_id = f"{meet_code}_{time.strftime('%Y-%m-%d_%H-%M-%S')}"
         self._session_id = session_id
         self._meet_code = meet_code
@@ -290,11 +292,29 @@ class AudioServer:
             return date_str, time_str
         return "-", "-"
 
+    @staticmethod
+    def _format_duration(seconds: int) -> str:
+        h = seconds // 3600
+        m = (seconds % 3600) // 60
+        s = seconds % 60
+        if h:
+            return f"{h}h {m:02d}m {s:02d}s"
+        if m:
+            return f"{m}m {s:02d}s"
+        return f"{s}s"
+
     async def _run_finalize_integrations(
         self, full_content: str | None, webm_path: str | None = None
     ) -> tuple[str | None, str | None]:
         """Upload transcript and audio to S3, print summary, notify Slack. Returns (transcript_url, audio_url)."""
-        date_str, time_str = self._parse_session_datetime()
+        import datetime
+        end_ts = time.time()
+        date_str, start_time_str = self._parse_session_datetime()
+        end_dt = datetime.datetime.fromtimestamp(end_ts)
+        end_time_str = end_dt.strftime("%H:%M:%S")
+        duration_sec = int(end_ts - self._start_time) if self._start_time else 0
+        duration_str = self._format_duration(duration_sec)
+
         participants = self.speaker_tracker.get_unique_speakers()
         participants_str = ", ".join(participants) if participants else "-"
 
@@ -308,7 +328,7 @@ class AudioServer:
                     full_content,
                     date_str,
                     self._meet_code,
-                    time_str,
+                    start_time_str,
                 )
                 self.logger.info(f"Transcript upload result: {transcript_url}")
             else:
@@ -319,7 +339,7 @@ class AudioServer:
                     webm_path,
                     date_str,
                     self._meet_code,
-                    time_str,
+                    start_time_str,
                 )
                 self.logger.info(f"Audio upload result: {audio_url}")
             else:
@@ -328,7 +348,8 @@ class AudioServer:
             self.logger.warning("S3 not configured, skipping upload")
 
         self.logger.info(
-            f"Session summary: date={date_str} time={time_str} room={self._meet_code} "
+            f"Session summary: date={date_str} start={start_time_str} end={end_time_str} "
+            f"duration={duration_str} room={self._meet_code} "
             f"participants={participants_str} transcript={transcript_url or '-'} audio={audio_url or '-'}"
         )
 
@@ -336,11 +357,13 @@ class AudioServer:
             await asyncio.to_thread(
                 self._slack.notify_transcript_ready,
                 date_str,
-                time_str,
+                start_time_str,
                 self._meet_code,
                 participants,
                 transcript_url,
                 audio_url,
+                end_time_str=end_time_str,
+                duration_str=duration_str,
                 slack_dm_email=self._slack_dm_email,
             )
         return transcript_url, audio_url

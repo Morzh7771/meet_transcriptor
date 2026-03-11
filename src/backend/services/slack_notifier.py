@@ -19,6 +19,17 @@ class SlackNotifier:
     def is_configured(self) -> bool:
         return bool(self._config.slack.WEBHOOK_URL) or bool(self._config.slack.BOT_TOKEN)
 
+    @staticmethod
+    def _clean_participants(participants: List[str]) -> List[str]:
+        """Strip parenthetical suffixes (e.g. screen-share labels) and deduplicate."""
+        import re
+        seen = []
+        for name in participants:
+            base = re.sub(r"\s*\(.*?\)\s*$", "", name).strip()
+            if base and base not in seen:
+                seen.append(base)
+        return seen
+
     def _build_text(
         self,
         date: str,
@@ -27,20 +38,27 @@ class SlackNotifier:
         participants: List[str],
         transcript_url: Optional[str],
         audio_url: Optional[str],
+        end_time_str: str = "",
+        duration_str: str = "",
     ) -> str:
+        cleaned = self._clean_participants(participants)
+        participants_str = ", ".join(cleaned) if cleaned else "-"
         transcript_link = f"<{transcript_url}|Transcript>" if transcript_url else "-"
         audio_link = f"<{audio_url}|Audio>" if audio_url else "-"
-        only_self = len(participants) <= 1
-        if only_self:
-            return f"*Transcript:* {transcript_link} / {audio_link}"
-        participants_str = ", ".join(participants)
-        return (
-            f"*Date:* {date}\n"
-            f"*Time:* {time_str}\n"
-            f"*Room:* {meet_code}\n"
-            f"*Participants:* {participants_str}\n"
-            f"*Transcript:* {transcript_link} / {audio_link}"
-        )
+        lines = [
+            f"*Date:* {date}",
+            f"*Start:* {time_str}",
+        ]
+        if end_time_str:
+            lines.append(f"*End:* {end_time_str}")
+        if duration_str:
+            lines.append(f"*Duration:* {duration_str}")
+        lines += [
+            f"*Room:* {meet_code}",
+            f"*Participants:* {participants_str}",
+            f"*Transcript:* {transcript_link} / {audio_link}",
+        ]
+        return "\n".join(lines)
 
     def _send_dm(self, email: str, text: str) -> bool:
         """Send a DM to a Slack user found by email using the Bot Token."""
@@ -120,10 +138,15 @@ class SlackNotifier:
         participants: List[str],
         transcript_url: Optional[str],
         audio_url: Optional[str] = None,
+        end_time_str: str = "",
+        duration_str: str = "",
         slack_dm_email: Optional[str] = None,
     ) -> bool:
         """Send DM if email given, otherwise send to channel via webhook."""
-        text = self._build_text(date, time_str, meet_code, participants, transcript_url, audio_url)
+        text = self._build_text(
+            date, time_str, meet_code, participants, transcript_url, audio_url,
+            end_time_str=end_time_str, duration_str=duration_str,
+        )
 
         # Email provided → DM only, skip webhook
         if slack_dm_email:

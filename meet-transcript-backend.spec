@@ -1,13 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_data_files
-from PyInstaller.utils.hooks import collect_submodules
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('/Users/morzh/Desktop/Project/js_plagin/src', 'src')]
+datas = []
 binaries = [('/opt/homebrew/bin/ffmpeg', '.'), ('/opt/homebrew/bin/ffprobe', '.')]
 hiddenimports = ['uvicorn.logging', 'uvicorn.protocols.http.auto', 'uvicorn.protocols.websockets.auto', 'uvicorn.lifespan.on', 'uvicorn.lifespan.off', 'boto3', 'botocore', 's3transfer', 'requests']
 datas += collect_data_files('botocore')
-hiddenimports += collect_submodules('src.backend')
 tmp_ret = collect_all('uvicorn')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('fastapi')
@@ -18,11 +16,13 @@ tmp_ret = collect_all('groq')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('pydub')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('backend')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
     ['/Users/morzh/Desktop/Project/js_plagin/main.py'],
-    pathex=[],
+    pathex=['/Users/morzh/Desktop/Project/js_plagin/src'],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,

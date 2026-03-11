@@ -96,6 +96,13 @@ def _get_log_path():
     return os.path.join(_DATA_DIR, "backend.log")
 
 
+def _no_window():
+    """Extra Popen kwargs to suppress console window on Windows."""
+    if sys.platform == "win32":
+        return {"creationflags": subprocess.CREATE_NO_WINDOW}
+    return {}
+
+
 def start_backend():
     """Start backend process. Returns (Popen, stderr_lines_list) or (None, [reason])."""
     env = build_env()
@@ -107,6 +114,7 @@ def start_backend():
             p = subprocess.Popen(
                 [exe], env=env, cwd=_DATA_DIR,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                **_no_window(),
             )
             _start_stderr_reader(p, stderr_lines)
             return p, stderr_lines
@@ -121,6 +129,7 @@ def start_backend():
         p = subprocess.Popen(
             [sys.executable, main_py], env=env, cwd=_DATA_DIR,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            **_no_window(),
         )
         _start_stderr_reader(p, stderr_lines)
         return p, stderr_lines
@@ -128,21 +137,30 @@ def start_backend():
         return None, [f"Failed to start: {e}"]
 
 
+_FILTERED_PATHS = ('/health HTTP/', '/status HTTP/')
+
+
 def _start_stderr_reader(proc, lines_list):
-    """Read combined stdout+stderr, keep last 200 lines in memory and write to log file."""
+    """Read combined stdout+stderr, keep last 200 lines in memory and write to log file.
+
+    Log file is opened in write mode so each fresh start clears previous output.
+    Access-log lines for /health and /status are silently dropped.
+    """
     log_path = _get_log_path()
 
     def _reader():
         try:
-            with open(log_path, "a", encoding="utf-8", buffering=1) as log_file:
-                log_file.write(f"\n=== backend started ===\n")
+            with open(log_path, "w", encoding="utf-8", buffering=1) as log_file:
                 for raw in proc.stdout:
                     line = raw.decode("utf-8", errors="replace").rstrip()
-                    if line:
-                        log_file.write(line + "\n")
-                        lines_list.append(line)
-                        if len(lines_list) > 200:
-                            lines_list.pop(0)
+                    if not line:
+                        continue
+                    if any(p in line for p in _FILTERED_PATHS):
+                        continue
+                    log_file.write(line + "\n")
+                    lines_list.append(line)
+                    if len(lines_list) > 200:
+                        lines_list.pop(0)
         except Exception:
             pass
 
@@ -197,7 +215,8 @@ def _extract_audio(video_path, output_mp3, log_fn):
         output_mp3,
     ]
     try:
-        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=900)
+        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=900,
+                           **_no_window())
         if r.returncode != 0:
             log_fn("ffmpeg error:\n" + r.stdout.decode("utf-8", errors="replace")[-800:])
             return False
@@ -227,7 +246,8 @@ def _split_audio_chunks(audio_path, tmp_files, log_fn, chunk_secs=600):
         pattern,
     ]
     try:
-        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=1800)
+        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=1800,
+                           **_no_window())
         if r.returncode != 0:
             log_fn("ffmpeg split error:\n" + r.stdout.decode("utf-8", errors="replace")[-500:])
             return []
@@ -500,6 +520,8 @@ def run_tk():
 
     def do_start():
         kill_process()
+        # Clear in-memory log buffer so restart is a clean slate
+        stderr_ref[0].clear()
         _, env_path = find_dotenv()
         if not env_path:
             expected = os.path.join(_DATA_DIR, ".env")
@@ -622,6 +644,30 @@ def run_tk():
         log_text.pack(side="left", fill="both", expand=True)
         scrollbar.config(command=log_text.yview)
 
+        def _copy_selection(event=None):
+            try:
+                selected = log_text.get(tk.SEL_FIRST, tk.SEL_LAST)
+            except tk.TclError:
+                selected = log_text.get("1.0", "end-1c")
+            win.clipboard_clear()
+            win.clipboard_append(selected)
+            return "break"
+
+        def _select_all(event=None):
+            log_text.tag_add(tk.SEL, "1.0", "end-1c")
+            log_text.mark_set(tk.INSERT, "1.0")
+            log_text.see(tk.INSERT)
+            return "break"
+
+        log_text.bind("<Control-c>", _copy_selection)
+        log_text.bind("<Control-C>", _copy_selection)
+        log_text.bind("<Command-c>", _copy_selection)
+        log_text.bind("<Meta-c>", _copy_selection)
+        log_text.bind("<Control-a>", _select_all)
+        log_text.bind("<Control-A>", _select_all)
+        log_text.bind("<Command-a>", _select_all)
+        log_text.bind("<Meta-a>", _select_all)
+
         # Horizontal scrollbar
         h_scroll = tk.Scrollbar(win, orient="horizontal", command=log_text.xview)
         h_scroll.pack(fill="x", padx=8)
@@ -649,6 +695,15 @@ def run_tk():
             nonlocal all_lines
             new_all = _load_lines()
             new_count = len(new_all)
+
+            # Log file was cleared (restart) — reset widget completely
+            if new_count < shown_lines[0]:
+                log_text.config(state="normal")
+                log_text.delete("1.0", "end")
+                log_text.config(state="disabled")
+                all_lines = []
+                shown_lines[0] = 0
+
             if new_count <= shown_lines[0]:
                 return  # nothing new
 
