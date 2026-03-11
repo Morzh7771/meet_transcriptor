@@ -30,9 +30,6 @@ def main():
     work_dir = PROJECT_ROOT / "build" / "pyinstaller"
     dist_dir = PROJECT_ROOT / "dist"
     dist_dir.mkdir(exist_ok=True)
-    src = PROJECT_ROOT / "src"
-    sep = ";" if is_win else ":"
-    add_data = f"{src}{sep}src"
 
     cmd = [
         sys.executable,
@@ -40,7 +37,6 @@ def main():
         str(PROJECT_ROOT / "main.py"),
         "--onefile",
         "--name", "meet-transcript-backend",
-        f"--add-data={add_data}",
         f"--paths={PROJECT_ROOT}",
         "--clean",
         "--noconfirm",
@@ -62,26 +58,7 @@ def main():
         "--hidden-import=s3transfer",
         "--collect-data=botocore",
         "--hidden-import=requests",
-        "--collect-submodules", "src.backend",
-        "--hidden-import=src",
-        "--hidden-import=src.backend",
-        "--hidden-import=src.backend.api.fast_api",
-        "--hidden-import=src.backend.core.facade",
-        "--hidden-import=src.backend.core.base_facade",
-        "--hidden-import=src.backend.models.api_models",
-        "--hidden-import=src.backend.services.session_manager",
-        "--hidden-import=src.backend.services.slack_notifier",
-        "--hidden-import=src.backend.services.s3_storage",
-        "--hidden-import=src.backend.audio.audio_server",
-        "--hidden-import=src.backend.audio.transcript_manager",
-        "--hidden-import=src.backend.audio.speaker_tracker",
-        "--hidden-import=src.backend.audio.speaker_resolver",
-        "--hidden-import=src.backend.audio.chunk_handler",
-        "--hidden-import=src.backend.modules.transcriber",
-        "--hidden-import=src.backend.utils.logger",
-        "--hidden-import=src.backend.utils.configs",
-        "--hidden-import=src.backend.utils.audio_preprocess",
-        "--hidden-import=src.backend.utils.port_finder",
+        "--collect-all", "src",
     ]
 
     # Bundle ffmpeg and ffprobe so pydub works without system install
