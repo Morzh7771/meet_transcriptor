@@ -12,7 +12,7 @@
   if (!MEET_CODE) return;
 
   const ROOM = MEET_CODE;
-  let panel, startStopBtn, statusEl;
+  let panel, startStopBtn, statusEl, emailInput;
   let isRecording = false;
   let speakerMonitorInterval = null;
   let inMeeting = false;
@@ -40,7 +40,7 @@
       color: "#fff",
       padding: "12px",
       borderRadius: "12px",
-      width: "200px",
+      width: "220px",
       boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
       fontFamily: "system-ui, Arial, sans-serif",
       display: "flex",
@@ -48,6 +48,31 @@
     });
 
     const title = el("div", { textContent: "Transcript" }, { fontWeight: "600", marginBottom: "8px", fontSize: "14px" });
+
+    const emailLabel = el("div", { textContent: "Slack email for DM:" }, { fontSize: "11px", opacity: 0.7, marginBottom: "4px" });
+    emailInput = el("input", { type: "email", placeholder: "user@company.com" }, {
+      width: "100%",
+      padding: "6px 8px",
+      borderRadius: "6px",
+      border: "1px solid #444",
+      background: "#2a2a2a",
+      color: "#fff",
+      fontSize: "12px",
+      boxSizing: "border-box",
+      marginBottom: "8px",
+      outline: "none",
+    });
+
+    chrome.storage.local.get("slackDmEmail", (res) => {
+      if (res.slackDmEmail) emailInput.value = res.slackDmEmail;
+    });
+    emailInput.addEventListener("change", () => {
+      chrome.storage.local.set({ slackDmEmail: emailInput.value.trim() });
+    });
+    emailInput.addEventListener("blur", () => {
+      chrome.storage.local.set({ slackDmEmail: emailInput.value.trim() });
+    });
+
     startStopBtn = el("button", { textContent: "Start" }, {
       width: "100%",
       padding: "10px",
@@ -60,7 +85,7 @@
     });
     statusEl = el("div", { textContent: "Idle" }, { marginTop: "6px", opacity: 0.85, fontSize: "12px" });
 
-    panel.append(title, startStopBtn, statusEl);
+    panel.append(title, emailLabel, emailInput, startStopBtn, statusEl);
     document.body.appendChild(panel);
     startStopBtn.onclick = () => (isRecording ? handleStop() : handleStart());
     setRecording(false);
@@ -76,9 +101,10 @@
   const handleStart = async () => {
     startStopBtn.disabled = true;
     setStatus("Starting…");
+    const slackDmEmail = emailInput ? emailInput.value.trim() : "";
     const ack = await sendExtMessage({
       type: "start",
-      opts: { apiBase: API_BASE, room: ROOM },
+      opts: { apiBase: API_BASE, room: ROOM, slackDmEmail },
     });
     if (ack?.ok) {
       setRecording(true);

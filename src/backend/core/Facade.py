@@ -33,10 +33,11 @@ class Facade(BaseFacade):
         meeting_language: str,
         ws_port: int,
         chat_port: int,
+        slack_dm_email: str | None = None,
     ):
         audio_server = await self.get_or_create_audio_server(meet_code)
         ws_task = asyncio.create_task(
-            audio_server.start(meet_code, meeting_language, ws_port, chat_port)
+            audio_server.start(meet_code, meeting_language, ws_port, chat_port, slack_dm_email=slack_dm_email)
         )
         servers_ready = await audio_server.wait_until_ready(timeout=15)
         if not servers_ready:

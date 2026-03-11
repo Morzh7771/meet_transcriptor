@@ -5,6 +5,7 @@ let config = {
   room: "",
   chunkMs: 15000,
   desktop: false,
+  slackDmEmail: "",
 };
 
 let tabStream = null;
@@ -170,7 +171,8 @@ const startSession = async () => {
     const meetCode = getRoomIdFromUrl(config.room) || config.room;
     const requestBody = {
       meet_code: meetCode,
-      meeting_language: config.meeting_language || "auto"
+      meeting_language: config.meeting_language || "auto",
+      slack_dm_email: config.slackDmEmail || "",
     };
 
     const res = await fetch(`${config.apiBase}/start`, {
@@ -697,7 +699,8 @@ const startCapture = async (opts = {}) => {
     room: opts.room || String(Date.now()),
     chunkMs: Math.max(1000, Math.min(120000, opts.chunkMs || config.chunkMs)),
     desktop: !!opts.desktop,
-    meeting_language: opts.meeting_language || "auto"
+    meeting_language: opts.meeting_language || "auto",
+    slackDmEmail: opts.slackDmEmail || "",
   });
 
   isRunning = true;

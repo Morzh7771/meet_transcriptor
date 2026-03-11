@@ -5,3 +5,4 @@ class StartMeetingRequest(BaseModel):
     """Minimal: meet_code only. Language auto-detected by Groq (ru/uk/en mix)."""
     meet_code: str
     meeting_language: str | None = None
+    slack_dm_email: str | None = None

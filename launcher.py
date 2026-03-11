@@ -168,13 +168,309 @@ def get_recording_status():
     return {"recording": False}
 
 
+# ---------------------------------------------------------------------------
+# File transcription helpers
+# ---------------------------------------------------------------------------
+
+def _find_ffmpeg():
+    """Return path to ffmpeg executable or None if not found."""
+    import shutil
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    for candidate in ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/usr/bin/ffmpeg"]:
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+def _extract_audio(video_path, output_mp3, log_fn):
+    """Extract audio track from video to mp3 using ffmpeg. Returns True on success."""
+    ffmpeg = _find_ffmpeg()
+    if not ffmpeg:
+        log_fn("ffmpeg not found. Install it: brew install ffmpeg")
+        return False
+    cmd = [
+        ffmpeg, "-y", "-i", video_path,
+        "-vn", "-acodec", "libmp3lame", "-q:a", "4",
+        "-ar", "16000", "-ac", "1",
+        output_mp3,
+    ]
+    try:
+        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=900)
+        if r.returncode != 0:
+            log_fn("ffmpeg error:\n" + r.stdout.decode("utf-8", errors="replace")[-800:])
+            return False
+        return True
+    except subprocess.TimeoutExpired:
+        log_fn("ffmpeg timed out (>15 min)")
+        return False
+    except Exception as e:
+        log_fn(f"ffmpeg failed: {e}")
+        return False
+
+
+def _split_audio_chunks(audio_path, tmp_files, log_fn, chunk_secs=600):
+    """Split audio into chunks of chunk_secs seconds. Returns list of paths or []."""
+    ffmpeg = _find_ffmpeg()
+    if not ffmpeg:
+        log_fn("ffmpeg not found — cannot split large audio")
+        return []
+    import tempfile
+    tmp_dir = tempfile.mkdtemp(prefix="transcript_chunks_")
+    tmp_files.append(tmp_dir)
+    pattern = os.path.join(tmp_dir, "chunk_%03d.mp3")
+    cmd = [
+        ffmpeg, "-y", "-i", audio_path,
+        "-f", "segment", "-segment_time", str(chunk_secs),
+        "-acodec", "libmp3lame", "-q:a", "4",
+        pattern,
+    ]
+    try:
+        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=1800)
+        if r.returncode != 0:
+            log_fn("ffmpeg split error:\n" + r.stdout.decode("utf-8", errors="replace")[-500:])
+            return []
+    except Exception as e:
+        log_fn(f"ffmpeg split failed: {e}")
+        return []
+    chunks = sorted(
+        os.path.join(tmp_dir, f) for f in os.listdir(tmp_dir) if f.endswith(".mp3")
+    )
+    log_fn(f"Split into {len(chunks)} chunks of ~{chunk_secs//60} min each")
+    return chunks
+
+
+def _groq_whisper_upload(audio_path, api_key, model):
+    """POST audio file to Groq Whisper API. Returns transcript text or raises."""
+    import requests
+
+    filename = os.path.basename(audio_path)
+    with open(audio_path, "rb") as f:
+        resp = requests.post(
+            "https://api.groq.com/openai/v1/audio/transcriptions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            files={"file": (filename, f, "audio/mpeg")},
+            data={"model": model, "response_format": "text"},
+            timeout=300,
+        )
+    if not resp.ok:
+        raise RuntimeError(f"{resp.status_code} {resp.reason}: {resp.text[:300]}")
+    return resp.text
+
+
+def open_transcript_window(parent):
+    """Open the file transcription window."""
+    import tkinter as tk
+    from tkinter import filedialog, font as tkfont
+    import tempfile
+
+    _ALL_AV = (
+        "*.mp3 *.wav *.ogg *.m4a *.flac *.aac *.opus *.wma *.aiff *.aif *.amr *.ra *.caf "
+        "*.mp4 *.mov *.avi *.mkv *.wmv *.flv *.m4v *.webm *.ts *.mts *.m2ts *.3gp *.3g2 "
+        "*.ogv *.vob *.rm *.rmvb *.divx *.f4v *.asf"
+    )
+
+    win = tk.Toplevel(parent)
+    win.title("File Transcription")
+    win.geometry("580x460")
+    win.resizable(True, True)
+
+    pad = {"padx": 12, "pady": 4}
+
+    # --- Input file row ---
+    tk.Label(win, text="Input file (audio or video):", anchor="w").pack(fill="x", **pad)
+    row1 = tk.Frame(win)
+    row1.pack(fill="x", padx=12, pady=2)
+    input_var = tk.StringVar()
+    tk.Entry(row1, textvariable=input_var, font=tkfont.Font(size=10)).pack(side="left", fill="x", expand=True)
+
+    def browse_input():
+        path = filedialog.askopenfilename(
+            parent=win,
+            title="Select audio or video file",
+            filetypes=[
+                ("Audio / Video (all formats)", _ALL_AV),
+                ("Audio", "*.mp3 *.wav *.ogg *.m4a *.flac *.aac *.opus *.wma *.aiff *.aif *.amr *.ra *.caf *.webm"),
+                ("Video", "*.mp4 *.mov *.avi *.mkv *.wmv *.flv *.m4v *.webm *.ts *.mts *.3gp *.ogv *.vob *.rm *.rmvb"),
+                ("All files", "*.*"),
+            ],
+        )
+        if path:
+            input_var.set(path)
+
+    tk.Button(row1, text="Browse…", command=browse_input).pack(side="left", padx=(6, 0))
+
+    # --- Output folder row ---
+    tk.Label(win, text="Save transcript to folder:", anchor="w").pack(fill="x", **pad)
+    row2 = tk.Frame(win)
+    row2.pack(fill="x", padx=12, pady=2)
+    output_var = tk.StringVar()
+    tk.Entry(row2, textvariable=output_var, font=tkfont.Font(size=10)).pack(side="left", fill="x", expand=True)
+
+    def browse_output():
+        path = filedialog.askdirectory(parent=win, title="Select output folder")
+        if path:
+            output_var.set(path)
+
+    tk.Button(row2, text="Browse…", command=browse_output).pack(side="left", padx=(6, 0))
+
+    # --- Status label ---
+    status_lbl = tk.Label(win, text="Ready", fg="gray", font=tkfont.Font(size=10))
+    status_lbl.pack(anchor="w", **pad)
+
+    # --- Log text area ---
+    log_frame = tk.Frame(win)
+    log_frame.pack(fill="both", expand=True, padx=12, pady=(0, 4))
+    sb = tk.Scrollbar(log_frame)
+    sb.pack(side="right", fill="y")
+    log_text = tk.Text(
+        log_frame, height=10,
+        font=("Menlo", 9),
+        bg="#1e1e1e", fg="#d4d4d4",
+        insertbackground="white",
+        wrap="word",
+        yscrollcommand=sb.set,
+        state="disabled",
+    )
+    log_text.pack(side="left", fill="both", expand=True)
+    sb.config(command=log_text.yview)
+
+    # --- Start button ---
+    start_btn = tk.Button(win, text="Start Transcription", font=tkfont.Font(size=12, weight="bold"))
+    start_btn.pack(pady=(4, 10))
+
+    # --- Helpers ---
+    def _log(msg):
+        def _do():
+            log_text.config(state="normal")
+            log_text.insert("end", msg + "\n")
+            log_text.see("end")
+            log_text.config(state="disabled")
+        win.after(0, _do)
+
+    def _set_status(msg, color="gray"):
+        win.after(0, lambda: status_lbl.config(text=msg, fg=color))
+
+    def _clear_log():
+        log_text.config(state="normal")
+        log_text.delete("1.0", "end")
+        log_text.config(state="disabled")
+
+    # --- Transcription worker ---
+    def do_transcribe():
+        input_path = input_var.get().strip()
+        output_dir = output_var.get().strip()
+
+        if not input_path:
+            _set_status("Select input file", "red")
+            return
+        if not os.path.isfile(input_path):
+            _set_status("Input file not found", "red")
+            return
+        if not output_dir:
+            _set_status("Select output folder", "red")
+            return
+        if not os.path.isdir(output_dir):
+            _set_status("Output folder not found", "red")
+            return
+
+        dotenv, _ = find_dotenv()
+        api_key = dotenv.get("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY", "")
+        if not api_key:
+            _set_status("GROQ_API_KEY not set in .env", "red")
+            return
+        model = dotenv.get("GROQ_WHISPER_MODEL", "whisper-large-v3-turbo")
+
+        start_btn.config(state="disabled")
+        _clear_log()
+        _set_status("Working…", "orange")
+
+        def run():
+            tmp_files = []
+            try:
+                # Step 1 — always convert through ffmpeg (handles every format uniformly).
+                # If ffmpeg is missing, fall back to uploading the original file directly.
+                if _find_ffmpeg():
+                    _log("Converting to audio via ffmpeg…")
+                    tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+                    tmp.close()
+                    tmp_files.append(tmp.name)
+                    if not _extract_audio(input_path, tmp.name, _log):
+                        _set_status("Audio extraction failed", "red")
+                        return
+                    audio_path = tmp.name
+                    _log("Audio ready.\n")
+                else:
+                    _log("ffmpeg not found — uploading original file directly.\n"
+                         "(Install ffmpeg for full format support: brew install ffmpeg)\n")
+                    audio_path = input_path
+
+                # Step 2 — check file size, split if > 24 MB
+                size_mb = os.path.getsize(audio_path) / (1024 * 1024)
+                _log(f"Audio size: {size_mb:.1f} MB")
+
+                if size_mb > 24:
+                    _log("File too large for direct upload — splitting into 10-min chunks…")
+                    chunks = _split_audio_chunks(audio_path, tmp_files, _log)
+                    if not chunks:
+                        _set_status("Failed to split audio", "red")
+                        return
+                else:
+                    chunks = [audio_path]
+
+                # Step 3 — transcribe each chunk
+                parts = []
+                for i, chunk in enumerate(chunks, 1):
+                    label = f"part {i}/{len(chunks)}" if len(chunks) > 1 else "file"
+                    _log(f"Transcribing {label} with Groq ({model})…")
+                    try:
+                        text = _groq_whisper_upload(chunk, api_key, model)
+                        parts.append(text.strip())
+                        _log(f"  Done ({label}).")
+                    except Exception as e:
+                        _log(f"Groq error: {e}")
+                        _set_status("Transcription failed", "red")
+                        return
+
+                full_text = "\n\n".join(parts)
+
+                # Step 4 — save
+                base = os.path.splitext(os.path.basename(input_path))[0]
+                out_path = os.path.join(output_dir, base + "_transcript.txt")
+                with open(out_path, "w", encoding="utf-8") as f:
+                    f.write(full_text)
+
+                _log(f"\nTranscript saved to:\n{out_path}")
+                _set_status("Done!", "green")
+
+            except Exception as e:
+                _log(f"Unexpected error: {e}")
+                _set_status("Error", "red")
+            finally:
+                for tmp in tmp_files:
+                    try:
+                        if os.path.isdir(tmp):
+                            import shutil
+                            shutil.rmtree(tmp, ignore_errors=True)
+                        elif os.path.isfile(tmp):
+                            os.unlink(tmp)
+                    except Exception:
+                        pass
+                win.after(0, lambda: start_btn.config(state="normal"))
+
+        threading.Thread(target=run, daemon=True).start()
+
+    start_btn.config(command=do_transcribe)
+
+
 def run_tk():
     import tkinter as tk
     from tkinter import font as tkfont
 
     root = tk.Tk()
     root.title("Meet Transcript")
-    root.geometry("380x200")
+    root.geometry("460x200")
     root.resizable(False, False)
 
     label = tk.Label(root, text="Starting backend...", font=tkfont.Font(size=16))
@@ -418,8 +714,14 @@ def run_tk():
     btn_restart = tk.Button(btn_frame, text="Restart", command=on_restart)
     btn_close = tk.Button(btn_frame, text="Close", command=on_close)
     btn_logs = tk.Button(btn_frame, text="Logs", command=on_show_logs, fg="gray")
+    btn_transcript = tk.Button(
+        btn_frame, text="Transcript",
+        command=lambda: open_transcript_window(root),
+        fg="#2d6cdf",
+    )
 
     btn_logs.pack(side="left", padx=10)
+    btn_transcript.pack(side="left", padx=10)
     if do_start():
         btn_close.pack(side="left", padx=10)
         root.after(400, check_ready)

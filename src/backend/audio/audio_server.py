@@ -34,6 +34,7 @@ class AudioServer:
         self.servers_ready = asyncio.Event()
         self._session_id = None
         self._meet_code = None
+        self._slack_dm_email = None
         self._s3 = S3Storage()
         self._slack = SlackNotifier()
         self._temp_dir = None
@@ -191,10 +192,11 @@ class AudioServer:
         except Exception as e:
             self.logger.error(f"Failed to send violation alert: {e}")
 
-    async def start(self, meet_code, meeting_language, ws_port, violations_port):
+    async def start(self, meet_code, meeting_language, ws_port, violations_port, slack_dm_email=None):
         session_id = f"{meet_code}_{time.strftime('%Y-%m-%d_%H-%M-%S')}"
         self._session_id = session_id
         self._meet_code = meet_code
+        self._slack_dm_email = (slack_dm_email or "").strip() or None
         raw = (meeting_language or "").strip().lower()
         self._meeting_language = "auto" if (not raw or raw == "auto") else meeting_language.strip()
 
@@ -339,6 +341,7 @@ class AudioServer:
                 participants,
                 transcript_url,
                 audio_url,
+                slack_dm_email=self._slack_dm_email,
             )
         return transcript_url, audio_url
 

@@ -38,6 +38,7 @@ class AwsConfig(ConfigBase):
 class SlackConfig(ConfigBase):
     model_config = SettingsConfigDict(env_prefix="SLACK_")
     WEBHOOK_URL: Optional[str] = Field(None, description="Slack Incoming Webhook URL for notifications")
+    BOT_TOKEN: Optional[str] = Field(None, description="Slack Bot Token (xoxb-...) for sending DMs via Web API")
 
 
 class Config(BaseSettings):

@@ -78,12 +78,14 @@ async def start(request: StartMeetingRequest):
 
         raw = (request.meeting_language or "").strip().lower()
         meeting_lang = "auto" if (not raw or raw == "auto") else request.meeting_language.strip()
+        slack_dm_email = (request.slack_dm_email or "").strip() or None
         task = asyncio.create_task(
             facade.run_google_meet_recording_api(
                 meet_code,
                 meeting_lang,
                 ws_port,
                 chat_port,
+                slack_dm_email=slack_dm_email,
             )
         )
         await session_manager.register(meet_code, task)
